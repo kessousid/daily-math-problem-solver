@@ -28,29 +28,17 @@ st.markdown("""
         font-size: 1rem;
         margin-bottom: 2rem;
     }
-    .problem-box {
-        background: linear-gradient(135deg, #f5f7fa, #e8ecf1);
-        border-left: 5px solid #667eea;
-        border-radius: 12px;
-        padding: 1.5rem 2rem;
-        font-size: 1.15rem;
-        line-height: 1.8;
-        margin: 1rem 0;
+    .section-label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 0.3rem;
+        margin-top: 1rem;
     }
-    .solution-box {
-        background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
-        border-left: 5px solid #4caf50;
-        border-radius: 12px;
-        padding: 1.5rem 2rem;
-        margin: 1rem 0;
-    }
-    .hint-box {
-        background: linear-gradient(135deg, #fff8e1, #fffde7);
-        border-left: 5px solid #ffc107;
-        border-radius: 12px;
-        padding: 1.2rem 1.8rem;
-        margin: 1rem 0;
-    }
+    .label-problem  { color: #667eea; }
+    .label-hint     { color: #e6a817; }
+    .label-solution { color: #2e7d32; }
     .badge {
         display: inline-block;
         padding: 0.25rem 0.75rem;
@@ -68,6 +56,12 @@ st.markdown("""
         border-radius: 8px;
         font-weight: 600;
         transition: all 0.2s;
+    }
+    /* Style info/warning/success alert boxes */
+    div[data-testid="stAlert"] {
+        border-radius: 12px;
+        font-size: 1.05rem;
+        line-height: 1.8;
     }
     .footer {
         text-align: center;
@@ -109,6 +103,35 @@ GRADE_TOPICS = {
 
 DIFFICULTY_EMOJI = {"Easy": "🟢", "Medium": "🟡", "Hard": "🔴"}
 
+LATEX_RULES = """
+MANDATORY LATEX FORMATTING RULES — no exceptions:
+- Use $...$ for ALL inline math: variables, numbers in equations, operators, expressions
+- Use $$...$$ for standalone/display equations (on their own line)
+- NEVER write mathematics as English words when a symbol exists
+  ✗ WRONG: "x squared plus 3x"         ✓ RIGHT: $x^2 + 3x$
+  ✗ WRONG: "integral of f(x) dx"       ✓ RIGHT: $\\int f(x)\\,dx$
+  ✗ WRONG: "square root of 2"          ✓ RIGHT: $\\sqrt{2}$
+  ✗ WRONG: "sum from i=1 to n"         ✓ RIGHT: $\\sum_{i=1}^{n}$
+  ✗ WRONG: "pi", "theta", "alpha"      ✓ RIGHT: $\\pi$, $\\theta$, $\\alpha$
+  ✗ WRONG: "infinity"                  ✓ RIGHT: $\\infty$
+  ✗ WRONG: "limit as x approaches 0"   ✓ RIGHT: $\\lim_{x \\to 0}$
+  ✗ WRONG: "a/b"                       ✓ RIGHT: $\\frac{a}{b}$
+  ✗ WRONG: "x^2" (plain text)          ✓ RIGHT: $x^2$ (in dollar signs)
+- Fractions: $\\frac{numerator}{denominator}$
+- Powers/exponents: $x^{n}$, $e^{2x}$
+- Subscripts: $a_n$, $x_1$
+- Greek letters: $\\alpha$, $\\beta$, $\\gamma$, $\\delta$, $\\lambda$, $\\mu$, $\\sigma$, $\\omega$
+- Trig: $\\sin$, $\\cos$, $\\tan$, $\\sec$, $\\csc$, $\\cot$
+- Log/ln: $\\log$, $\\ln$, $\\log_b$
+- Vectors: $\\vec{v}$, $\\hat{i}$
+- Matrices: $$\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$$
+- Inequalities: $\\leq$, $\\geq$, $\\neq$, $\\approx$, $\\in$, $\\subset$
+- Absolute value: $|x|$ or $\\left|\\frac{a}{b}\\right|$
+- Binomial coefficient: $\\binom{n}{k}$
+- Derivatives: $f'(x)$, $\\frac{dy}{dx}$, $\\frac{d^2y}{dx^2}$
+- Partial derivatives: $\\frac{\\partial f}{\\partial x}$
+"""
+
 # ── API client ────────────────────────────────────────────────────────────────
 def get_client():
     try:
@@ -134,14 +157,15 @@ def get_client():
         st.stop()
     return anthropic.Anthropic(api_key=api_key.strip())
 
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def build_problem_prompt(grade: str, difficulty: str, topic: str) -> str:
     jee_note = (
-        " This is for IIT JEE preparation — use JEE Main/Advanced style and difficulty."
+        " This is for IIT JEE preparation — use JEE Main/Advanced style."
         if grade == "IIT JEE" else ""
     )
     olympiad_note = (
-        " This is for Math Olympiad — the problem should require elegant, non-routine reasoning."
+        " This is for Math Olympiad — require elegant, non-routine reasoning."
         if grade == "Math Olympiad" else ""
     )
     return f"""You are an expert mathematics teacher. Generate a single, self-contained math problem for:
@@ -149,43 +173,47 @@ def build_problem_prompt(grade: str, difficulty: str, topic: str) -> str:
 - Topic: {topic}
 - Difficulty: {difficulty}
 
-Format your response EXACTLY as follows (use these exact section headers):
+{LATEX_RULES}
+
+Format your response EXACTLY as follows:
 
 PROBLEM:
-<Write the complete problem statement here. Use plain text with LaTeX math notation where needed, e.g. $x^2 + 3x + 2 = 0$. Do NOT include the answer.>
+<Complete problem statement using LaTeX for ALL math. Do NOT include the answer.>
 
 TOPIC TAG:
 <One short topic label, e.g. "Quadratic Equations">
 
 HINT:
-<One subtle hint that nudges without giving away the answer>
+<One subtle hint using LaTeX for any math expressions — nudges without giving away the answer>
 
-Keep the problem clear, unambiguous, and appropriate for the level. Do not include the solution."""
+Keep the problem clear and appropriate for {grade} level. Do not include the solution."""
 
 
 def build_solution_prompt(grade: str, difficulty: str, problem: str) -> str:
     jee_note = " Use JEE-style approach with shortcuts where applicable." if grade == "IIT JEE" else ""
-    olympiad_note = " Show the elegant olympiad-style reasoning." if grade == "Math Olympiad" else ""
-    return f"""You are an expert, patient mathematics tutor explaining a solution to a {grade} student.{jee_note}{olympiad_note}
+    olympiad_note = " Show elegant olympiad-style reasoning." if grade == "Math Olympiad" else ""
+    return f"""You are an expert mathematics tutor explaining a solution to a {grade} student.{jee_note}{olympiad_note}
 
 Problem:
 {problem}
 
-Provide a COMPLETE step-by-step solution. Structure it as:
+{LATEX_RULES}
 
-ANSWER:
-<Give the final answer first, clearly>
+Provide a COMPLETE step-by-step solution structured as:
 
-STEP-BY-STEP SOLUTION:
-<Numbered steps, each explaining the WHY behind the step. Use LaTeX math notation e.g. $expression$.>
+**Answer:**
+<Final answer — use LaTeX for the result, e.g. $x = \\frac{{-1 \\pm \\sqrt{{5}}}}{{2}}$>
 
-KEY CONCEPT:
-<In 1-2 sentences, state the core mathematical idea this problem tests>
+**Step-by-Step Solution:**
+<Numbered steps. Every equation, expression, or symbol MUST be in LaTeX. Explain the WHY of each step.>
 
-COMMON MISTAKES:
-<List 1-2 common mistakes students make on this type of problem>
+**Key Concept:**
+<1–2 sentences on the core idea. Use LaTeX for any math terms.>
 
-Tailor the depth and vocabulary to a {grade} student at {difficulty} level."""
+**Common Mistakes:**
+<1–2 mistakes students make, using LaTeX for the erroneous and correct expressions.>
+
+Tailor depth and vocabulary to a {grade} student at {difficulty} difficulty."""
 
 
 def parse_problem(text: str) -> dict:
@@ -203,21 +231,21 @@ def parse_problem(text: str) -> dict:
 
 
 def stream_response(client, prompt: str, placeholder):
+    """Stream Claude response; placeholder uses st.markdown (renders LaTeX)."""
     full_text = ""
     try:
         with client.messages.stream(
             model="claude-haiku-4-5-20251001",
-            max_tokens=1500,
+            max_tokens=1800,
             messages=[{"role": "user", "content": prompt}],
         ) as stream:
             for text in stream.text_stream:
                 full_text += text
-                placeholder.markdown(full_text + "▌")
-        placeholder.markdown(full_text)
+                placeholder.markdown(full_text + " ▌")
+        placeholder.empty()
     except anthropic.AuthenticationError:
         st.error(
             "**Invalid API key.** Your key was found but rejected by Anthropic.\n\n"
-            "Please:\n"
             "1. Go to https://console.anthropic.com/settings/keys\n"
             "2. Delete the old key and create a **new** one\n"
             "3. Copy the **full** key (100+ characters)\n"
@@ -266,7 +294,6 @@ with st.sidebar:
     st.divider()
     st.markdown(f"**Problems solved this session:** {st.session_state.problem_count} 🏆")
     st.markdown("""
----
 **Tips:**
 - Try solving before peeking at hints
 - Use the AI explanation to understand *why*, not just *what*
@@ -285,7 +312,6 @@ if generate_btn:
     with st.spinner("Generating your problem..."):
         placeholder = st.empty()
         raw = stream_response(client, prompt, placeholder)
-        placeholder.empty()
 
     st.session_state.problem_data = {
         **parse_problem(raw),
@@ -307,13 +333,13 @@ if st.session_state.problem_data:
         unsafe_allow_html=True,
     )
 
-    # Problem box
-    st.markdown(
-        f'<div class="problem-box">{data["problem"]}</div>',
-        unsafe_allow_html=True,
-    )
+    # ── Problem ───────────────────────────────────────────────────────────────
+    st.markdown('<p class="section-label label-problem">📝 Problem</p>', unsafe_allow_html=True)
+    # st.info renders its body through Streamlit's markdown engine → LaTeX works
+    st.info(data["problem"])
 
-    col1, col2, col3 = st.columns([1, 1, 1])
+    # ── Action buttons ────────────────────────────────────────────────────────
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         if st.button("💡 Show Hint", use_container_width=True):
@@ -329,7 +355,6 @@ if st.session_state.problem_data:
                 )
                 sol_placeholder = st.empty()
                 solution_text = stream_response(client, sol_prompt, sol_placeholder)
-                sol_placeholder.empty()
                 st.session_state.solution = solution_text
                 st.session_state.problem_count += 1
 
@@ -343,7 +368,6 @@ if st.session_state.problem_data:
             with st.spinner("Generating..."):
                 placeholder = st.empty()
                 raw = stream_response(client, prompt, placeholder)
-                placeholder.empty()
             st.session_state.problem_data = {
                 **parse_problem(raw),
                 "grade": data["grade"],
@@ -352,19 +376,17 @@ if st.session_state.problem_data:
             }
             st.rerun()
 
-    # Hint
+    # ── Hint ──────────────────────────────────────────────────────────────────
     if st.session_state.show_hint and data.get("hint"):
-        st.markdown(
-            f'<div class="hint-box"><strong>💡 Hint:</strong><br>{data["hint"]}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown('<p class="section-label label-hint">💡 Hint</p>', unsafe_allow_html=True)
+        # st.warning renders through Streamlit's markdown engine → LaTeX works
+        st.warning(data["hint"])
 
-    # Solution
+    # ── Solution ──────────────────────────────────────────────────────────────
     if st.session_state.show_solution and st.session_state.solution:
-        st.markdown(
-            f'<div class="solution-box">{st.session_state.solution}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown('<p class="section-label label-solution">✅ Solution & Explanation</p>', unsafe_allow_html=True)
+        # st.success renders through Streamlit's markdown engine → LaTeX works
+        st.success(st.session_state.solution)
 
 else:
     # Welcome screen
