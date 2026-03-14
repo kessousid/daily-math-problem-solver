@@ -110,21 +110,29 @@ GRADE_TOPICS = {
 DIFFICULTY_EMOJI = {"Easy": "🟢", "Medium": "🟡", "Hard": "🔴"}
 
 # ── API client ────────────────────────────────────────────────────────────────
-@st.cache_resource
 def get_client():
     try:
         api_key = st.secrets["ANTHROPIC_API_KEY"]
     except Exception:
         api_key = None
-    if not api_key:
+    if not api_key or api_key.strip() == "sk-ant-your-key-here":
         st.error(
-            "**Anthropic API key not found.**\n\n"
-            "Add it to `.streamlit/secrets.toml`:\n```\nANTHROPIC_API_KEY = 'sk-ant-...'\n```\n"
-            "or set the `ANTHROPIC_API_KEY` environment variable.",
+            "**Anthropic API key not found or not set.**\n\n"
+            "In Streamlit Cloud go to **Manage app → Settings → Secrets** and add:\n"
+            "```\nANTHROPIC_API_KEY = \"sk-ant-api03-...\"\n```\n"
+            "Get your key at https://console.anthropic.com/settings/keys",
             icon="🔑",
         )
         st.stop()
-    return anthropic.Anthropic(api_key=api_key)
+    if not api_key.startswith("sk-ant-"):
+        st.error(
+            "**API key format looks wrong.**\n\n"
+            f"Your key starts with `{api_key[:10]}...` but it should start with `sk-ant-`.\n\n"
+            "Please copy the full key from https://console.anthropic.com/settings/keys",
+            icon="⚠️",
+        )
+        st.stop()
+    return anthropic.Anthropic(api_key=api_key.strip())
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def build_problem_prompt(grade: str, difficulty: str, topic: str) -> str:
@@ -196,15 +204,30 @@ def parse_problem(text: str) -> dict:
 
 def stream_response(client, prompt: str, placeholder):
     full_text = ""
-    with client.messages.stream(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=1500,
-        messages=[{"role": "user", "content": prompt}],
-    ) as stream:
-        for text in stream.text_stream:
-            full_text += text
-            placeholder.markdown(full_text + "▌")
-    placeholder.markdown(full_text)
+    try:
+        with client.messages.stream(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1500,
+            messages=[{"role": "user", "content": prompt}],
+        ) as stream:
+            for text in stream.text_stream:
+                full_text += text
+                placeholder.markdown(full_text + "▌")
+        placeholder.markdown(full_text)
+    except anthropic.AuthenticationError:
+        st.error(
+            "**Invalid API key.** Your key was found but rejected by Anthropic.\n\n"
+            "Please:\n"
+            "1. Go to https://console.anthropic.com/settings/keys\n"
+            "2. Delete the old key and create a **new** one\n"
+            "3. Copy the **full** key (100+ characters)\n"
+            "4. Update it in Streamlit Cloud → **Manage app → Settings → Secrets**",
+            icon="🔑",
+        )
+        st.stop()
+    except anthropic.APIStatusError as e:
+        st.error(f"**API Error {e.status_code}:** {e.message}", icon="❌")
+        st.stop()
     return full_text
 
 
