@@ -918,6 +918,13 @@ with tab_daily:
         raw = stream_response(client, build_problem_prompt(grade, difficulty, topic, subtopic), ph)
         st.session_state.problem_data = {**parse_problem(raw), "grade": grade,
             "difficulty": difficulty, "topic": topic, "subtopic": subtopic}
+        # Auto-switch to Daily Drop tab regardless of which tab the user is on
+        st.markdown("""<script>
+setTimeout(function(){
+  var tabs=document.querySelectorAll('[data-baseweb="tab"]');
+  if(tabs&&tabs.length>0){tabs[0].click();}
+},300);
+</script>""", unsafe_allow_html=True)
 
     if st.session_state.problem_data:
         data = st.session_state.problem_data
