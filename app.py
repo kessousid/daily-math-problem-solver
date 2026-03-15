@@ -12,21 +12,58 @@ except ImportError:
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="MathDrop ⚡",
+    page_title="Maths Daily Helper – AI Maths Practice for Grade 1–12, IIT JEE & Olympiad",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ── PWA ───────────────────────────────────────────────────────────────────────
+# ── PWA + SEO ─────────────────────────────────────────────────────────────────
 st.markdown("""
+<!-- PWA -->
 <link rel="manifest" href="/app/static/manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="MathDrop">
+<meta name="apple-mobile-web-app-title" content="Maths Daily Helper">
 <meta name="theme-color" content="#8b5cf6">
 <link rel="apple-touch-icon" href="/app/static/icon-192.png">
+
+<!-- SEO: Core -->
+<meta name="description" content="Free AI-powered maths practice for Grade 1 to Grade 12, IIT JEE, BITSAT, Math Olympiad, SAT and more. Get daily problems, hints, step-by-step solutions and full sample papers — powered by Claude AI.">
+<meta name="keywords" content="maths practice, daily maths problems, IIT JEE maths, math olympiad, grade 1 to 12 maths, CBSE maths, ICSE maths, maths helper, AI maths tutor, free maths practice, step by step maths solutions, maths daily helper">
+<meta name="author" content="Maths Daily Helper">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://www.mathsdailyhelper.com/">
+
+<!-- SEO: Open Graph (WhatsApp, Facebook previews) -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.mathsdailyhelper.com/">
+<meta property="og:title" content="Maths Daily Helper – AI Maths Practice for Grade 1–12, IIT JEE & Olympiad">
+<meta property="og:description" content="Free AI-powered daily maths practice. Problems, hints & step-by-step solutions for every grade — from Grade 1 to IIT JEE.">
+<meta property="og:image" content="https://www.mathsdailyhelper.com/app/static/icon-512.png">
+
+<!-- SEO: Twitter/X card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Maths Daily Helper – AI Maths Practice">
+<meta name="twitter:description" content="Free AI-powered daily maths practice for Grade 1–12, IIT JEE & Olympiad.">
+<meta name="twitter:image" content="https://www.mathsdailyhelper.com/app/static/icon-512.png">
+
+<!-- SEO: Structured data (Google Education) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Maths Daily Helper",
+  "url": "https://www.mathsdailyhelper.com",
+  "description": "AI-powered maths practice for Grade 1 to Grade 12, IIT JEE, Math Olympiad and more.",
+  "applicationCategory": "EducationApplication",
+  "operatingSystem": "All",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+  "audience": {"@type": "EducationalAudience", "educationalRole": "student"}
+}
+</script>
+
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
