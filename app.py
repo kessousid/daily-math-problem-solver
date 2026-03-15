@@ -35,7 +35,6 @@ st.markdown("""
     .badge-hard{background:#f8d7da;color:#721c24;} .badge-grade{background:#cce5ff;color:#004085;}
     .badge-topic{background:#e2d9f3;color:#4a235a;}
     .paper-header{background:linear-gradient(135deg,#1a1a2e,#16213e);color:white;border-radius:12px;padding:1.5rem 2rem;text-align:center;margin-bottom:1rem;}
-    .resource-card{border:1px solid #e0e0e0;border-radius:10px;padding:1rem 1.2rem;margin-bottom:.6rem;background:#fafafa;}
     .stButton>button{border-radius:8px;font-weight:600;}
     div[data-testid="stAlert"]{border-radius:12px;font-size:1.05rem;line-height:1.8;}
     .footer{text-align:center;color:#aaa;font-size:.8rem;margin-top:3rem;padding-top:1rem;border-top:1px solid #eee;}
@@ -365,142 +364,6 @@ BOARDS = list(BOARD_FORMATS.keys())
 PAPER_GRADES = [f"Grade {g}" for g in range(6, 13)]
 PAPER_YEARS = [str(y) for y in range(2024, 2014, -1)]
 
-# Official resource links — homepage level (stable)
-OFFICIAL_RESOURCES = {
-    "CBSE": {
-        "official": ("https://cbse.gov.in", "CBSE official website"),
-        "papers":   ("https://cbseacademic.nic.in/SQP.html", "CBSE Academic — Sample Question Papers"),
-        "notes":    "Go to Academic → Question Bank / SQP section for year-wise papers.",
-    },
-    "ICSE": {
-        "official": ("https://cisce.org", "CISCE official website"),
-        "papers":   ("https://cisce.org/publications.aspx", "CISCE Publications — Specimen Papers"),
-        "notes":    "Click Publications → Specimen Question Papers for ICSE/ISC.",
-    },
-    "ISC": {
-        "official": ("https://cisce.org", "CISCE official website"),
-        "papers":   ("https://cisce.org/publications.aspx", "CISCE Publications — ISC Specimen Papers"),
-        "notes":    "Click Publications → Specimen Question Papers → ISC.",
-    },
-    "Maharashtra State Board": {
-        "official": ("https://mahahsscboard.in", "MSBSHSE official website"),
-        "papers":   ("https://mahahsscboard.in", "Maharashtra Board — navigate to Previous Year Papers"),
-        "notes":    "Go to Student Section → Previous Year Question Papers.",
-    },
-    "Karnataka State Board": {
-        "official": ("https://kseab.karnataka.gov.in", "KSEAB official website"),
-        "papers":   ("https://kseab.karnataka.gov.in", "KSEAB — navigate to Question Papers"),
-        "notes":    "Go to Examinations → Model Question Papers or Previous Year Papers.",
-    },
-    "Tamil Nadu State Board": {
-        "official": ("https://dge.tn.gov.in", "Tamil Nadu DGE official website"),
-        "papers":   ("https://dge.tn.gov.in", "TN DGE — navigate to Previous Question Papers"),
-        "notes":    "Go to Previous Year Question Papers section for SSLC / HSC papers.",
-    },
-    "UP Board": {
-        "official": ("https://upmsp.edu.in", "UPMSP official website"),
-        "papers":   ("https://upmsp.edu.in", "UPMSP — navigate to Model Papers"),
-        "notes":    "Go to Model Papers or Previous Year Papers section.",
-    },
-    "West Bengal State Board": {
-        "official": ("https://wbbse.wb.gov.in", "WBBSE official website"),
-        "papers":   ("https://wbchse.wb.gov.in", "WBCHSE — HS Board (Grades 11–12)"),
-        "notes":    "WBBSE (Madhyamik) and WBCHSE (HS) both publish previous year papers on their sites.",
-    },
-    "IB (HL)": {
-        "official": ("https://www.ibo.org", "International Baccalaureate official website"),
-        "papers":   ("https://www.ibdocuments.com", "IB Documents — Past Papers Repository"),
-        "notes":    "IBO does not publish past papers publicly. Use the IB Documents site or your school's IB resource centre.",
-    },
-    "IB (SL)": {
-        "official": ("https://www.ibo.org", "International Baccalaureate official website"),
-        "papers":   ("https://www.ibdocuments.com", "IB Documents — Past Papers Repository"),
-        "notes":    "IBO does not publish past papers publicly. Use the IB Documents site or your school's IB resource centre.",
-    },
-    "Cambridge IGCSE": {
-        "official": ("https://www.cambridgeinternational.org", "Cambridge International Education"),
-        "papers":   ("https://www.cambridgeinternational.org/programmes-and-qualifications/cambridge-igcse-mathematics-0580/past-papers/", "Cambridge IGCSE 0580 Past Papers"),
-        "notes":    "Click into the link to find year-wise past papers (free after free registration).",
-    },
-    "Cambridge A-Level": {
-        "official": ("https://www.cambridgeinternational.org", "Cambridge International Education"),
-        "papers":   ("https://www.cambridgeinternational.org/programmes-and-qualifications/cambridge-international-as-and-a-level-mathematics-9709/past-papers/", "Cambridge A-Level 9709 Past Papers"),
-        "notes":    "Click into the link to find year-wise past papers (free after free registration).",
-    },
-    "SAT Math (USA)": {
-        "official": ("https://satsuite.collegeboard.org", "College Board SAT Suite"),
-        "papers":   ("https://satsuite.collegeboard.org/sat/practice-preparation/practice-tests", "SAT Official Practice Tests"),
-        "notes":    "8 full official SAT practice tests are available free on the College Board website.",
-    },
-    "AMC 10 / AMC 12 (USA)": {
-        "official": ("https://maa.org/math-competitions", "MAA Math Competitions"),
-        "papers":   ("https://artofproblemsolving.com/wiki/index.php/AMC_Problems_and_Solutions", "Art of Problem Solving — AMC Past Problems"),
-        "notes":    "AoPS hosts all past AMC 8/10/12/AIME problems with solutions.",
-    },
-    "AIME (USA)": {
-        "official": ("https://maa.org/math-competitions", "MAA Math Competitions"),
-        "papers":   ("https://artofproblemsolving.com/wiki/index.php/AIME_Problems_and_Solutions", "Art of Problem Solving — AIME Past Problems"),
-        "notes":    "All AIME I and II papers from past years are on AoPS with community solutions.",
-    },
-    "UKMT (UK)": {
-        "official": ("https://www.ukmt.org.uk", "UKMT official website"),
-        "papers":   ("https://www.ukmt.org.uk/competition-papers", "UKMT Competition Papers — Past Papers"),
-        "notes":    "UKMT publishes Junior, Intermediate and Senior past papers directly on their website.",
-    },
-    "Singapore A-Level (H2 Math)": {
-        "official": ("https://www.seab.gov.sg", "Singapore Examinations and Assessment Board"),
-        "papers":   ("https://www.seab.gov.sg/home/examinations/gce-a-level/a-level-past-years-exam-papers", "SEAB — GCE A-Level Past Year Papers"),
-        "notes":    "SEAB publishes A-Level past papers. Registration may be required.",
-    },
-    "South Korea CSAT (수능)": {
-        "official": ("https://www.suneung.re.kr", "KICE — Korea Institute for Curriculum and Evaluation"),
-        "papers":   ("https://www.suneung.re.kr/main.do", "KICE — Official CSAT Papers"),
-        "notes":    "Past CSAT papers are published on the KICE website in Korean. English translated versions are available via search.",
-    },
-    "Australia HSC / VCE": {
-        "official": ("https://educationstandards.nsw.edu.au", "NESA — NSW Education Standards Authority"),
-        "papers":   ("https://educationstandards.nsw.edu.au/wps/portal/nesa/11-12/resources/hsc-exam-papers", "NESA — HSC Past Exam Papers"),
-        "notes":    "NESA (NSW/HSC) and VCAA (VCE/Victoria) both publish free past papers on their sites.",
-    },
-    "China Gaokao (高考)": {
-        "official": ("https://www.gaokao.cn", "Gaokao.cn — official information portal"),
-        "papers":   ("https://www.gaokao.cn", "Navigate to 真题 (Past Papers) section"),
-        "notes":    "Past Gaokao papers are available on gaokao.cn and major Chinese education sites.",
-    },
-    "Japan Kyotsu-Test (共通テスト)": {
-        "official": ("https://www.dnc.ac.jp", "National Center for University Entrance Examinations (NCUEE)"),
-        "papers":   ("https://www.dnc.ac.jp/kyotsu/kako/", "NCUEE — Past Kyotsu-Test Papers"),
-        "notes":    "The NCUEE publishes all past Kyotsu-Test papers (共通テスト) on their website.",
-    },
-    "Germany Abitur": {
-        "official": ("https://www.kmk.org", "Kultusministerkonferenz (KMK)"),
-        "papers":   ("https://www.standardsicherung.schulministerium.nrw.de", "NRW Standardsicherung — Abitur Papers (NRW example)"),
-        "notes":    "Abitur papers vary by state (Bundesland). Search '[state] Abitur Mathematik Prüfungsaufgaben [year]'.",
-    },
-    "France Baccalauréat (Terminale)": {
-        "official": ("https://www.education.gouv.fr", "Ministère de l'Éducation Nationale"),
-        "papers":   ("https://www.sujetdebac.fr", "Sujet de Bac — Past Baccalauréat Papers"),
-        "notes":    "Past Bac papers (sujets et corrigés) are freely available on sujetdebac.fr.",
-    },
-    "Math Olympiad (IMO/RMO)": {
-        "official": ("https://www.imo-official.org", "International Mathematical Olympiad — official site"),
-        "papers":   ("https://artofproblemsolving.com/wiki/index.php/IMO_Problems_and_Solutions", "AoPS — IMO Past Problems & Solutions"),
-        "notes":    "All IMO problems since 1959 are available on the official IMO site and AoPS.",
-    },
-    "IIT JEE": {
-        "official": ("https://jeeadv.ac.in", "JEE Advanced official website"),
-        "papers":   ("https://jeeadv.ac.in/pastqp.html", "JEE Advanced — Past Question Papers"),
-        "notes":    "JEE Advanced past papers are on jeeadv.ac.in. JEE Main papers are on jeemain.nta.nic.in.",
-    },
-    "BITSAT (BITS Pilani)": {
-        "official": ("https://www.bitsadmission.com", "BITS Pilani Admission — BITSAT"),
-        "papers":   ("https://www.bitsadmission.com", "BITSAT — Sample Papers & Practice"),
-        "notes":    "BITS Pilani publishes official sample papers on their admission site. Past year papers are available on coaching institute sites.",
-    },
-}
-
-# All exams/boards with official resources (for Past Resources tab)
-ALL_RESOURCE_EXAMS = list(OFFICIAL_RESOURCES.keys())
 
 # ═════════════════════════════════════════════════════════════════════════════
 # LATEX RULES
@@ -680,10 +543,6 @@ def extract_pdf_text(pdf_bytes):
         return None
 
 
-def google_search_url(query):
-    import urllib.parse
-    return f"https://www.google.com/search?q={urllib.parse.quote(query)}"
-
 # ═════════════════════════════════════════════════════════════════════════════
 # SESSION STATE
 # ═════════════════════════════════════════════════════════════════════════════
@@ -705,8 +564,8 @@ st.markdown('<div class="subtitle">Grade 1 · IIT JEE · SAT · AMC · UKMT · G
 # ═════════════════════════════════════════════════════════════════════════════
 # TABS
 # ═════════════════════════════════════════════════════════════════════════════
-tab_daily, tab_paper, tab_resources, tab_doubt = st.tabs([
-    "📝 Daily Practice", "📋 Exam Papers", "🏛️ Past Paper Resources", "💬 Ask a Doubt"
+tab_daily, tab_paper, tab_doubt = st.tabs([
+    "📝 Daily Practice", "📋 Exam Papers", "💬 Ask a Doubt"
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -793,7 +652,7 @@ with tab_daily:
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_paper:
     st.subheader("📋 Generate a Full Exam Paper")
-    st.caption("AI generates a complete practice paper in your chosen board's official format. For real past papers, see the **Past Paper Resources** tab.")
+    st.caption("AI generates a complete practice paper in your chosen board's official format.")
 
     pc1, pc2, pc3 = st.columns([1.2, 1, 1])
     with pc1: p_board = st.selectbox("🏫 Board / Curriculum", BOARDS, key="p_board")
@@ -863,87 +722,7 @@ with tab_paper:
 """)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 3 — PAST PAPER RESOURCES
-# ══════════════════════════════════════════════════════════════════════════════
-with tab_resources:
-    st.subheader("🏛️ Find Official Past Papers")
-    st.caption("Select a board/exam and year to get a direct search link for that paper, plus the official website.")
-
-    r1, r2, r3 = st.columns([1.5, 1, 1])
-    with r1: r_board = st.selectbox("🏫 Board / Exam", ALL_RESOURCE_EXAMS, key="r_board")
-    with r2:
-        r_grade_opts = ["All Grades"] + [f"Grade {g}" for g in range(6, 13)]
-        r_grade = st.selectbox("📚 Grade / Class", r_grade_opts, key="r_grade")
-    with r3:
-        r_year = st.selectbox("📅 Year", PAPER_YEARS, key="r_year")
-
-    # Grade number for search queries
-    grade_num = r_grade.replace("Grade ", "") if r_grade != "All Grades" else ""
-    grade_label = f"Class {grade_num}" if grade_num else ""
-
-    # Build search query
-    search_q = f"{r_board} {grade_label} Mathematics question paper {r_year} PDF".strip()
-    search_url = google_search_url(search_q)
-    solutions_search_url = google_search_url(f"{r_board} {grade_label} Mathematics {r_year} solutions answer key PDF")
-
-    res = OFFICIAL_RESOURCES.get(r_board, {})
-    official_url, official_label = res.get("official", ("#", r_board))
-    papers_url, papers_label = res.get("papers", ("#", "Past Papers"))
-    notes = res.get("notes", "")
-
-    st.divider()
-
-    # Cards
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.markdown(f"""
-<div class="resource-card">
-    <strong>🔍 Search for {r_board} {grade_label} {r_year} Paper</strong><br>
-    <span style="color:#555;font-size:.9rem;">Opens a Google search for this specific paper</span><br><br>
-    <a href="{search_url}" target="_blank" style="background:#667eea;color:white;padding:.4rem 1rem;border-radius:6px;text-decoration:none;font-weight:600;">
-        Search Question Paper →
-    </a>
-    &nbsp;&nbsp;
-    <a href="{solutions_search_url}" target="_blank" style="background:#2e7d32;color:white;padding:.4rem 1rem;border-radius:6px;text-decoration:none;font-weight:600;">
-        Search Solutions →
-    </a>
-</div>""", unsafe_allow_html=True)
-
-    with col_b:
-        st.markdown(f"""
-<div class="resource-card">
-    <strong>🌐 Official {r_board} Website</strong><br>
-    <span style="color:#555;font-size:.9rem;">{official_label}</span><br>
-    <a href="{official_url}" target="_blank">🔗 {official_url}</a><br><br>
-    <strong>📄 Past Papers Section</strong><br>
-    <span style="color:#555;font-size:.9rem;">{papers_label}</span><br>
-    <a href="{papers_url}" target="_blank">🔗 {papers_url}</a>
-</div>""", unsafe_allow_html=True)
-
-    if notes:
-        st.info(f"ℹ️ **Note:** {notes}")
-
-    st.divider()
-    st.markdown("#### 🔗 Quick Links — All Boards & Exams")
-
-    # Group display
-    groups = {
-        "🇮🇳 Indian Boards": ["CBSE","ICSE","ISC","Maharashtra State Board","Karnataka State Board","Tamil Nadu State Board","UP Board","West Bengal State Board"],
-        "🇮🇳 Indian Competitive": ["IIT JEE","BITSAT (BITS Pilani)","Math Olympiad (IMO/RMO)"],
-        "🇺🇸 USA": ["SAT Math (USA)","AMC 10 / AMC 12 (USA)","AIME (USA)"],
-        "🌍 International": ["UKMT (UK)","Singapore A-Level (H2 Math)","South Korea CSAT (수능)","Australia HSC / VCE","China Gaokao (高考)","Japan Kyotsu-Test (共通テスト)","Germany Abitur","France Baccalauréat (Terminale)","IB (HL)","IB (SL)","Cambridge IGCSE","Cambridge A-Level"],
-    }
-    gcols = st.columns(len(groups))
-    for col, (group_name, exams) in zip(gcols, groups.items()):
-        with col:
-            st.markdown(f"**{group_name}**")
-            for exam in exams:
-                res_e = OFFICIAL_RESOURCES.get(exam, {})
-                url_e, _ = res_e.get("official", ("#", exam))
-                st.markdown(f"[{exam}]({url_e})", unsafe_allow_html=False)
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — ASK A DOUBT
+# TAB 3 — ASK A DOUBT
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_doubt:
     st.subheader("💬 Ask Your Math Doubt")
