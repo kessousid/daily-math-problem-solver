@@ -12,32 +12,272 @@ except ImportError:
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Daily Math Problem Solver",
-    page_icon="🧮",
+    page_title="MathDrop ⚡",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
 <style>
-    .main-title {
-        font-size:2.4rem; font-weight:800;
-        background:linear-gradient(135deg,#667eea,#764ba2);
-        -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-        text-align:center; margin-bottom:0.2rem;
-    }
-    .subtitle{text-align:center;color:#666;font-size:1rem;margin-bottom:1.5rem;}
-    .section-label{font-size:.82rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:.8rem 0 .2rem;}
-    .label-problem{color:#667eea;} .label-hint{color:#e6a817;} .label-solution{color:#2e7d32;}
-    .badge{display:inline-block;padding:.25rem .75rem;border-radius:20px;font-size:.78rem;font-weight:700;margin-right:.4rem;}
-    .badge-easy{background:#d4edda;color:#155724;} .badge-medium{background:#fff3cd;color:#856404;}
-    .badge-hard{background:#f8d7da;color:#721c24;} .badge-grade{background:#cce5ff;color:#004085;}
-    .badge-topic{background:#e2d9f3;color:#4a235a;}
-    .paper-header{background:linear-gradient(135deg,#1a1a2e,#16213e);color:white;border-radius:12px;padding:1.5rem 2rem;text-align:center;margin-bottom:1rem;}
-    .stButton>button{border-radius:8px;font-weight:600;}
-    div[data-testid="stAlert"]{border-radius:12px;font-size:1.05rem;line-height:1.8;}
-    .footer{text-align:center;color:#aaa;font-size:.8rem;margin-top:3rem;padding-top:1rem;border-top:1px solid #eee;}
+/* ── Base ── */
+html, body, [class*="css"], .stApp {
+    font-family: 'Space Grotesk', sans-serif !important;
+}
+.stApp {
+    background: #0d0d1f;
+    background-image:
+        radial-gradient(ellipse at 15% 40%, rgba(139,92,246,0.18) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 15%, rgba(236,72,153,0.12) 0%, transparent 55%),
+        radial-gradient(ellipse at 60% 85%, rgba(6,182,212,0.10) 0%, transparent 55%);
+}
+
+/* ── Sidebar ── */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, rgba(15,10,40,0.98) 0%, rgba(20,15,55,0.98) 100%) !important;
+    border-right: 1px solid rgba(139,92,246,0.25) !important;
+}
+section[data-testid="stSidebar"] * { font-family: 'Space Grotesk', sans-serif !important; }
+section[data-testid="stSidebar"] label { color: rgba(226,232,240,0.7) !important; font-size: 0.8rem !important; font-weight: 600 !important; letter-spacing: 0.06em !important; text-transform: uppercase !important; }
+
+/* ── Tabs ── */
+.stTabs [data-baseweb="tab-list"] {
+    background: rgba(255,255,255,0.04) !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    padding: 5px !important;
+    gap: 4px !important;
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 10px !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    color: rgba(226,232,240,0.55) !important;
+    padding: 0.5rem 1.2rem !important;
+    transition: all 0.25s ease !important;
+    border: none !important;
+}
+.stTabs [data-baseweb="tab"]:hover {
+    color: rgba(226,232,240,0.9) !important;
+    background: rgba(139,92,246,0.12) !important;
+}
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 15px rgba(139,92,246,0.4) !important;
+}
+.stTabs [data-baseweb="tab-highlight"] { display: none !important; }
+.stTabs [data-baseweb="tab-border"] { display: none !important; }
+
+/* ── Buttons ── */
+.stButton > button {
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-weight: 700 !important;
+    border-radius: 12px !important;
+    border: none !important;
+    padding: 0.55rem 1.4rem !important;
+    font-size: 0.88rem !important;
+    letter-spacing: 0.02em !important;
+    transition: all 0.25s ease !important;
+    background: rgba(139,92,246,0.15) !important;
+    color: #c4b5fd !important;
+    border: 1px solid rgba(139,92,246,0.3) !important;
+}
+.stButton > button:hover {
+    transform: translateY(-2px) !important;
+    background: rgba(139,92,246,0.28) !important;
+    border-color: rgba(139,92,246,0.6) !important;
+    box-shadow: 0 8px 25px rgba(139,92,246,0.35) !important;
+    color: #ede9fe !important;
+}
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #8b5cf6, #ec4899) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 4px 20px rgba(139,92,246,0.45) !important;
+}
+.stButton > button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #7c3aed, #db2777) !important;
+    box-shadow: 0 8px 30px rgba(139,92,246,0.6) !important;
+    color: #ffffff !important;
+}
+
+/* ── Inputs & selects ── */
+.stSelectbox > div > div,
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea {
+    background: rgba(255,255,255,0.05) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    border-radius: 12px !important;
+    color: #e2e8f0 !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+}
+.stSelectbox > div > div:hover,
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+    border-color: rgba(139,92,246,0.5) !important;
+    box-shadow: 0 0 0 3px rgba(139,92,246,0.15) !important;
+}
+
+/* ── Radio buttons ── */
+.stRadio > div { gap: 0.5rem !important; }
+.stRadio > div > label {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 10px !important;
+    padding: 0.4rem 1rem !important;
+    transition: all 0.2s !important;
+    font-weight: 600 !important;
+    font-size: 0.88rem !important;
+}
+.stRadio > div > label:hover { border-color: rgba(139,92,246,0.4) !important; background: rgba(139,92,246,0.08) !important; }
+
+/* ── Alert boxes (problem / hint / solution) ── */
+div[data-testid="stAlert"] {
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-radius: 18px !important;
+    font-size: 1.06rem !important;
+    line-height: 1.85 !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+    border-width: 1px !important;
+}
+
+/* ── Multiselect ── */
+.stMultiSelect > div > div {
+    background: rgba(255,255,255,0.05) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    border-radius: 12px !important;
+}
+
+/* ── Divider ── */
+hr { border-color: rgba(255,255,255,0.08) !important; }
+
+/* ── Custom classes ── */
+.hero-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #a78bfa 0%, #ec4899 50%, #38bdf8 100%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+    margin-bottom: 0.3rem;
+    animation: gradientShift 4s ease infinite;
+}
+@keyframes gradientShift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+.hero-sub {
+    text-align: center;
+    color: rgba(226,232,240,0.5);
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 1.8rem;
+    font-family: 'Space Grotesk', sans-serif;
+}
+.section-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    margin: 1rem 0 0.3rem; display: flex; align-items: center; gap: 6px;
+}
+.label-problem { color: #a78bfa; }
+.label-hint    { color: #fbbf24; }
+.label-solution{ color: #34d399; }
+
+.badge {
+    display: inline-block;
+    padding: 0.2rem 0.8rem;
+    border-radius: 100px;
+    font-size: 0.72rem; font-weight: 700;
+    margin-right: 0.35rem;
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: 0.03em;
+}
+.badge-easy   { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+.badge-medium { background: rgba(251,191,36,0.15);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+.badge-hard   { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+.badge-grade  { background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
+.badge-topic  { background: rgba(56,189,248,0.15);  color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); }
+
+.stat-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 0.8rem 1rem;
+    text-align: center;
+    font-family: 'Space Grotesk', sans-serif;
+}
+.stat-number {
+    font-size: 1.8rem; font-weight: 800;
+    background: linear-gradient(135deg,#a78bfa,#ec4899);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    line-height: 1.1;
+}
+.stat-label { font-size: 0.72rem; color: rgba(226,232,240,0.45); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+
+.rank-pill {
+    display: inline-block;
+    background: linear-gradient(135deg, rgba(139,92,246,0.25), rgba(236,72,153,0.25));
+    border: 1px solid rgba(139,92,246,0.4);
+    border-radius: 100px;
+    padding: 0.3rem 1rem;
+    font-size: 0.82rem; font-weight: 700;
+    color: #c4b5fd;
+    font-family: 'Space Grotesk', sans-serif;
+}
+.feature-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 1.6rem 1.4rem;
+    text-align: center;
+    transition: transform 0.3s, border-color 0.3s;
+    font-family: 'Space Grotesk', sans-serif;
+}
+.feature-card:hover { transform: translateY(-4px); border-color: rgba(139,92,246,0.35); }
+.feature-icon { font-size: 2.2rem; margin-bottom: 0.6rem; }
+.feature-title { font-size: 1rem; font-weight: 700; color: #e2e8f0; margin-bottom: 0.4rem; }
+.feature-desc { font-size: 0.85rem; color: rgba(226,232,240,0.5); line-height: 1.5; }
+
+.paper-header {
+    background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(236,72,153,0.15));
+    border: 1px solid rgba(139,92,246,0.3);
+    border-radius: 18px;
+    padding: 1.5rem 2rem;
+    text-align: center;
+    margin-bottom: 1.2rem;
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+.upload-zone {
+    border: 2px dashed rgba(139,92,246,0.35);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    background: rgba(139,92,246,0.05);
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+.footer {
+    text-align: center;
+    color: rgba(226,232,240,0.25);
+    font-size: 0.78rem;
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    font-family: 'Space Grotesk', sans-serif;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -558,14 +798,14 @@ for k, v in {
 # ═════════════════════════════════════════════════════════════════════════════
 # HEADER
 # ═════════════════════════════════════════════════════════════════════════════
-st.markdown('<div class="main-title">🧮 Daily Math Problem Solver</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Grade 1 · IIT JEE · SAT · AMC · UKMT · Gaokao · Abitur & more — powered by AI</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-title">⚡ MathDrop</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-sub">big brain energy · Grade 1 → IIT JEE · SAT · AMC · Olympiad · Gaokao · Abitur & more</div>', unsafe_allow_html=True)
 
 # ═════════════════════════════════════════════════════════════════════════════
 # TABS
 # ═════════════════════════════════════════════════════════════════════════════
 tab_daily, tab_paper, tab_doubt = st.tabs([
-    "📝 Daily Practice", "📋 Exam Papers", "💬 Ask a Doubt"
+    "⚡ Daily Drop", "📋 Full Paper", "💬 Ask Anything"
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -573,18 +813,43 @@ tab_daily, tab_paper, tab_doubt = st.tabs([
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_daily:
     with st.sidebar:
-        st.header("⚙️ Daily Practice")
-        grade    = st.selectbox("📚 Grade / Level / Exam", GRADES)
+        # Rank logic
+        n = st.session_state.problem_count
+        if n == 0:    rank, rank_emoji = "Newcomer", "🌱"
+        elif n < 5:   rank, rank_emoji = "Rookie",   "🔥"
+        elif n < 15:  rank, rank_emoji = "Grinder",  "⚡"
+        elif n < 30:  rank, rank_emoji = "Big Brain", "🧠"
+        else:          rank, rank_emoji = "Legend",   "👑"
+
+        st.markdown(f"""
+<div style="text-align:center;padding:1rem 0 0.5rem;">
+    <div style="font-size:2rem;">{rank_emoji}</div>
+    <div class="rank-pill">{rank}</div>
+    <div style="margin-top:0.8rem;display:flex;gap:8px;justify-content:center;">
+        <div class="stat-card" style="flex:1;">
+            <div class="stat-number">{n}</div>
+            <div class="stat-label">solved</div>
+        </div>
+        <div class="stat-card" style="flex:1;">
+            <div class="stat-number">{'🔥' if n > 0 else '—'}</div>
+            <div class="stat-label">streak</div>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+        st.divider()
+
+        grade    = st.selectbox("📚 Level / Exam", GRADES)
         topics   = list(GRADE_CURRICULUM[grade].keys())
         topic    = st.selectbox("📖 Topic", topics)
         subtopic = st.selectbox("📐 Subtopic", GRADE_CURRICULUM[grade][topic])
-        difficulty = st.radio("🎯 Difficulty", DIFFICULTIES, index=1,
+        difficulty = st.radio("🎯 How spicy?", DIFFICULTIES, index=1,
                               format_func=lambda d: f"{DIFFICULTY_EMOJI[d]} {d}")
         st.divider()
-        generate_btn = st.button("✨ Generate Problem", use_container_width=True, type="primary")
+        generate_btn = st.button("🚀 Drop a Problem", use_container_width=True, type="primary")
         st.divider()
-        st.markdown(f"**Problems solved this session:** {st.session_state.problem_count} 🏆")
-        st.markdown("**Tips:**\n- Attempt before looking at hints\n- Understand *why* each step works\n- Increase difficulty once comfortable!")
+        st.markdown("<div style='color:rgba(226,232,240,0.4);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;'>Pro Tips</div>", unsafe_allow_html=True)
+        st.markdown("<div style='color:rgba(226,232,240,0.55);font-size:0.82rem;line-height:1.7;'>🎯 Always try before hitting hint<br>🧠 Understand the <em>why</em>, not just the answer<br>📈 Level up difficulty once you're comfortable</div>", unsafe_allow_html=True)
 
     if generate_btn:
         st.session_state.update(show_hint=False, show_solution=False, solution=None)
@@ -608,10 +873,10 @@ with tab_daily:
 
         c1, c2, c3 = st.columns(3)
         with c1:
-            if st.button("💡 Show Hint", use_container_width=True):
+            if st.button("💡 Give Me a Nudge", use_container_width=True):
                 st.session_state.show_hint = not st.session_state.show_hint
         with c2:
-            if st.button("🔍 Show Solution & Explanation", use_container_width=True, type="primary"):
+            if st.button("🧠 Reveal the W", use_container_width=True, type="primary"):
                 st.session_state.show_solution = True
                 if not st.session_state.solution:
                     client = get_client()
@@ -620,8 +885,9 @@ with tab_daily:
                         data["grade"], data["difficulty"], data["topic"], data["subtopic"], data["problem"]), ph)
                     st.session_state.solution = sol
                     st.session_state.problem_count += 1
+                    st.balloons()
         with c3:
-            if st.button("🔄 New Problem (Same Settings)", use_container_width=True):
+            if st.button("🔄 Next One", use_container_width=True):
                 st.session_state.update(show_hint=False, show_solution=False, solution=None)
                 client = get_client()
                 ph = st.empty()
@@ -638,21 +904,38 @@ with tab_daily:
             st.markdown('<p class="section-label label-solution">✅ Solution & Explanation</p>', unsafe_allow_html=True)
             st.success(st.session_state.solution)
     else:
-        st.info("👈 **Select your grade/exam, topic, subtopic and difficulty in the sidebar, then click Generate Problem.**", icon="🚀")
+        st.markdown("""
+<div style="text-align:center;padding:2rem 0 1rem;">
+    <div style="font-size:1.15rem;font-weight:600;color:rgba(226,232,240,0.6);margin-bottom:0.3rem;">ready to big brain it?</div>
+    <div style="font-size:0.9rem;color:rgba(226,232,240,0.35);">pick your level on the left and hit 🚀</div>
+</div>
+""", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
         with c1:
-            st.markdown("### 🎓 For All Levels\nGrade 1 through IIT JEE, SAT, AMC, UKMT, Gaokao, Abitur and more.")
+            st.markdown("""<div class="feature-card">
+<div class="feature-icon">🎓</div>
+<div class="feature-title">Every Level</div>
+<div class="feature-desc">Grade 1 → IIT JEE · SAT · AMC · Gaokao · Abitur · Olympiad and more</div>
+</div>""", unsafe_allow_html=True)
         with c2:
-            st.markdown("### 🤖 AI-Powered\nProper LaTeX math notation. Step-by-step explanations tailored to your exam.")
+            st.markdown("""<div class="feature-card">
+<div class="feature-icon">🤖</div>
+<div class="feature-title">AI Explanations</div>
+<div class="feature-desc">Step-by-step solutions with proper maths notation, tailored to your exact exam</div>
+</div>""", unsafe_allow_html=True)
         with c3:
-            st.markdown("### 📈 Daily Habits\nOne focused subtopic per day. Understand it deeply, then move on.")
+            st.markdown("""<div class="feature-card">
+<div class="feature-icon">🔥</div>
+<div class="feature-title">Build Streaks</div>
+<div class="feature-desc">One focused subtopic a day. Stack knowledge, not just answers. Rank up 👑</div>
+</div>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 2 — EXAM PAPERS
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_paper:
-    st.subheader("📋 Generate a Full Exam Paper")
-    st.caption("AI generates a complete practice paper in your chosen board's official format.")
+    st.markdown("<div style='font-size:1.5rem;font-weight:800;color:#e2e8f0;margin-bottom:0.2rem;'>📋 Full Send a Paper</div>", unsafe_allow_html=True)
+    st.markdown("<div style='color:rgba(226,232,240,0.45);font-size:0.88rem;margin-bottom:1.2rem;'>AI builds a complete exam paper in your board's official format. Attempt it, then reveal the full marking scheme.</div>", unsafe_allow_html=True)
 
     pc1, pc2, pc3 = st.columns([1.2, 1, 1])
     with pc1: p_board = st.selectbox("🏫 Board / Curriculum", BOARDS, key="p_board")
@@ -725,8 +1008,8 @@ with tab_paper:
 # TAB 3 — ASK A DOUBT
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_doubt:
-    st.subheader("💬 Ask Your Math Doubt")
-    st.caption("Type your doubt, or upload a photo/scan/PDF of the problem. AI will explain it step-by-step with proper math notation.")
+    st.markdown("<div style='font-size:1.5rem;font-weight:800;color:#e2e8f0;margin-bottom:0.2rem;'>💬 Ask Anything</div>", unsafe_allow_html=True)
+    st.markdown("<div style='color:rgba(226,232,240,0.45);font-size:0.88rem;margin-bottom:1.2rem;'>No cap — type, snap, or upload whatever's confusing you. AI breaks it down step by step.</div>", unsafe_allow_html=True)
 
     d1, d2 = st.columns([1, 2])
     with d1:
@@ -799,4 +1082,4 @@ with tab_doubt:
             st.rerun()
 
 # ── Footer ────────────────────────────────────────────────────────────────────
-st.markdown('<div class="footer">Built with ❤️ using Streamlit & Claude AI</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">built with ⚡ by mathdrop · powered by claude ai · made for the curious ones</div>', unsafe_allow_html=True)
