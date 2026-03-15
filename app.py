@@ -850,7 +850,7 @@ for k, v in {
     "problem_data": None, "solution": None,
     "show_hint": False, "show_solution": False, "problem_count": 0,
     "paper_text": None, "paper_solutions": None, "show_paper_solutions": False, "paper_meta": None,
-    "doubt_response": None,
+    "doubt_response": None, "active_tab": 0,
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -862,17 +862,9 @@ st.markdown('<div class="hero-title">⚡ MathDrop</div>', unsafe_allow_html=True
 st.markdown('<div class="hero-sub">big brain energy · Grade 1 → IIT JEE · SAT · AMC · Olympiad · Gaokao · Abitur & more</div>', unsafe_allow_html=True)
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TABS
+# SIDEBAR (global — always visible)
 # ═════════════════════════════════════════════════════════════════════════════
-tab_daily, tab_paper, tab_doubt = st.tabs([
-    "⚡ Daily Drop", "📋 Full Paper", "💬 Ask Anything"
-])
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 1 — DAILY PRACTICE
-# ══════════════════════════════════════════════════════════════════════════════
-with tab_daily:
-    with st.sidebar:
+with st.sidebar:
         # Rank logic
         n = st.session_state.problem_count
         if n == 0:    rank, rank_emoji = "Newcomer", "🌱"
@@ -907,10 +899,30 @@ with tab_daily:
                               format_func=lambda d: f"{DIFFICULTY_EMOJI[d]} {d}")
         st.divider()
         generate_btn = st.button("🚀 Drop a Problem", use_container_width=True, type="primary")
+        if generate_btn:
+            st.session_state.active_tab = 0
         st.divider()
         st.markdown("<div style='color:rgba(226,232,240,0.4);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;'>Pro Tips</div>", unsafe_allow_html=True)
         st.markdown("<div style='color:rgba(226,232,240,0.55);font-size:0.82rem;line-height:1.7;'>🎯 Always try before hitting hint<br>🧠 Understand the <em>why</em>, not just the answer<br>📈 Level up difficulty once you're comfortable</div>", unsafe_allow_html=True)
 
+# ═════════════════════════════════════════════════════════════════════════════
+# CUSTOM TABS
+# ═════════════════════════════════════════════════════════════════════════════
+_tab_labels = ["⚡ Daily Drop", "📋 Full Paper", "💬 Ask Anything"]
+_tcols = st.columns(3)
+for _i, (_col, _label) in enumerate(zip(_tcols, _tab_labels)):
+    with _col:
+        if st.button(_label, use_container_width=True,
+                     type="primary" if st.session_state.active_tab == _i else "secondary",
+                     key=f"tab_btn_{_i}"):
+            st.session_state.active_tab = _i
+            st.rerun()
+st.divider()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 1 — DAILY PRACTICE
+# ══════════════════════════════════════════════════════════════════════════════
+if st.session_state.active_tab == 0:
     if generate_btn:
         st.session_state.update(show_hint=False, show_solution=False, solution=None)
         client = get_client()
@@ -918,13 +930,6 @@ with tab_daily:
         raw = stream_response(client, build_problem_prompt(grade, difficulty, topic, subtopic), ph)
         st.session_state.problem_data = {**parse_problem(raw), "grade": grade,
             "difficulty": difficulty, "topic": topic, "subtopic": subtopic}
-        # Auto-switch to Daily Drop tab regardless of which tab the user is on
-        st.markdown("""<script>
-setTimeout(function(){
-  var tabs=document.querySelectorAll('[data-baseweb="tab"]');
-  if(tabs&&tabs.length>0){tabs[0].click();}
-},300);
-</script>""", unsafe_allow_html=True)
 
     if st.session_state.problem_data:
         data = st.session_state.problem_data
@@ -1000,7 +1005,7 @@ setTimeout(function(){
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 2 — EXAM PAPERS
 # ══════════════════════════════════════════════════════════════════════════════
-with tab_paper:
+elif st.session_state.active_tab == 1:
     st.markdown("<div style='font-size:1.5rem;font-weight:800;color:#e2e8f0;margin-bottom:0.2rem;'>📋 Full Send a Paper</div>", unsafe_allow_html=True)
     st.markdown("<div style='color:rgba(226,232,240,0.45);font-size:0.88rem;margin-bottom:1.2rem;'>AI builds a complete exam paper in your board's official format. Attempt it, then reveal the full marking scheme.</div>", unsafe_allow_html=True)
 
@@ -1074,7 +1079,7 @@ with tab_paper:
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — ASK A DOUBT
 # ══════════════════════════════════════════════════════════════════════════════
-with tab_doubt:
+elif st.session_state.active_tab == 2:
     st.markdown("<div style='font-size:1.5rem;font-weight:800;color:#e2e8f0;margin-bottom:0.2rem;'>💬 Ask Anything</div>", unsafe_allow_html=True)
     st.markdown("<div style='color:rgba(226,232,240,0.45);font-size:0.88rem;margin-bottom:1.2rem;'>No cap — type, snap, or upload whatever's confusing you. AI breaks it down step by step.</div>", unsafe_allow_html=True)
 
