@@ -18,6 +18,25 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ── PWA ───────────────────────────────────────────────────────────────────────
+st.markdown("""
+<link rel="manifest" href="/app/static/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MathDrop">
+<meta name="theme-color" content="#8b5cf6">
+<link rel="apple-touch-icon" href="/app/static/icon-192.png">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/app/static/sw.js', {scope: '/'})
+      .catch(err => console.log('SW registration failed:', err));
+  });
+}
+</script>
+""", unsafe_allow_html=True)
+
 # ── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
