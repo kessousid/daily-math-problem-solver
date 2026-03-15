@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://www.mathsdailyhelper.com/app/static/sitemap.xml
