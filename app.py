@@ -648,12 +648,16 @@ MANDATORY LATEX FORMATTING — no exceptions:
 # API CLIENT
 # ═════════════════════════════════════════════════════════════════════════════
 def get_client():
+    import os
+    api_key = None
     try:
         api_key = st.secrets["ANTHROPIC_API_KEY"]
     except Exception:
-        api_key = None
+        pass
+    if not api_key:
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key or api_key.strip() == "sk-ant-your-key-here":
-        st.error("**API key not set.** Add `ANTHROPIC_API_KEY` in Streamlit Cloud → Manage app → Settings → Secrets.", icon="🔑")
+        st.error("**API key not set.** Add `ANTHROPIC_API_KEY` as an environment variable.", icon="🔑")
         st.stop()
     if not api_key.startswith("sk-ant-"):
         st.error(f"**API key format wrong** — starts with `{api_key[:10]}...`, should start with `sk-ant-`.", icon="⚠️")
