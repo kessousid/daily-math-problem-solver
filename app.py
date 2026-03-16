@@ -3,6 +3,7 @@ import anthropic
 import re
 import base64
 import io
+import streamlit.components.v1 as components
 
 try:
     import pdfplumber
@@ -18,17 +19,19 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── PWA + SEO ─────────────────────────────────────────────────────────────────
-st.markdown("""
-<!-- Google Analytics -->
+# ── Google Analytics ───────────────────────────────────────────────────────────
+components.html("""
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-VCJYMNK2K5"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
+  window.dataLayer = window.parent.dataLayer = window.parent.dataLayer || [];
+  function gtag(){window.parent.dataLayer.push(arguments);}
   gtag('js', new Date());
-  gtag('config', 'G-VCJYMNK2K5');
+  gtag('config', 'G-VCJYMNK2K5', {'send_page_view': true});
 </script>
+""", height=0)
 
+# ── PWA + SEO ─────────────────────────────────────────────────────────────────
+st.markdown("""
 <!-- PWA -->
 <link rel="manifest" href="/app/static/manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
