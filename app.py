@@ -1205,8 +1205,10 @@ elif st.session_state.active_tab == 2:
                     st.error("Could not extract text from this PDF. Try uploading an image instead.", icon="❌")
 
     st.divider()
-    ask_btn = st.button("🤔 Get AI Explanation", type="primary", disabled=not ready, use_container_width=False)
+    ask_btn = st.button("🤔 Get AI Explanation", type="primary", use_container_width=False)
 
+    if ask_btn and not ready:
+        st.warning("Please enter a question, upload an image, or upload a PDF first.", icon="⚠️")
     if ask_btn and ready and prompt_text:
         st.session_state.doubt_response = None
         client = get_client()
