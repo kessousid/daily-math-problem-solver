@@ -20,6 +20,15 @@ st.set_page_config(
 
 # ── PWA + SEO ─────────────────────────────────────────────────────────────────
 st.markdown("""
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VCJYMNK2K5"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-VCJYMNK2K5');
+</script>
+
 <!-- PWA -->
 <link rel="manifest" href="/app/static/manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
