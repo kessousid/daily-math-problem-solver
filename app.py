@@ -21,12 +21,20 @@ st.set_page_config(
 
 # ── Google Analytics ───────────────────────────────────────────────────────────
 components.html("""
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-VCJYMNK2K5"></script>
 <script>
-  window.dataLayer = window.parent.dataLayer = window.parent.dataLayer || [];
-  function gtag(){window.parent.dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-VCJYMNK2K5', {'send_page_view': true});
+(function() {
+  var p = window.parent;
+  // Inject GA script tag into parent document head
+  var s = p.document.createElement('script');
+  s.async = true;
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=G-VCJYMNK2K5';
+  p.document.head.appendChild(s);
+  // Set up dataLayer and gtag in parent
+  p.dataLayer = p.dataLayer || [];
+  p.gtag = function(){ p.dataLayer.push(arguments); };
+  p.gtag('js', new Date());
+  p.gtag('config', 'G-VCJYMNK2K5');
+})();
 </script>
 """, height=0)
 
