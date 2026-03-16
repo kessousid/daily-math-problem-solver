@@ -19,23 +19,10 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Google Analytics ───────────────────────────────────────────────────────────
+# ── Cloudflare Web Analytics ───────────────────────────────────────────────────
 components.html("""
-<script>
-(function() {
-  var p = window.parent;
-  // Inject GA script tag into parent document head
-  var s = p.document.createElement('script');
-  s.async = true;
-  s.src = 'https://www.googletagmanager.com/gtag/js?id=G-VCJYMNK2K5';
-  p.document.head.appendChild(s);
-  // Set up dataLayer and gtag in parent
-  p.dataLayer = p.dataLayer || [];
-  p.gtag = function(){ p.dataLayer.push(arguments); };
-  p.gtag('js', new Date());
-  p.gtag('config', 'G-VCJYMNK2K5');
-})();
-</script>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js'
+  data-cf-beacon='{"token": "681818aa5f3248c58e22969b6977d9f3"}'></script>
 """, height=0)
 
 # ── PWA + SEO ─────────────────────────────────────────────────────────────────
