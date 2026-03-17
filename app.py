@@ -21,8 +21,15 @@ st.set_page_config(
 
 # ── Cloudflare Web Analytics ───────────────────────────────────────────────────
 components.html("""
-<script defer src='https://static.cloudflareinsights.com/beacon.min.js'
-  data-cf-beacon='{"token": "681818aa5f3248c58e22969b6977d9f3"}'></script>
+<script>
+(function() {
+  var s = window.parent.document.createElement('script');
+  s.defer = true;
+  s.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+  s.setAttribute('data-cf-beacon', '{"token": "681818aa5f3248c58e22969b6977d9f3"}');
+  window.parent.document.head.appendChild(s);
+})();
+</script>
 """, height=0)
 
 # ── PWA + SEO ─────────────────────────────────────────────────────────────────
