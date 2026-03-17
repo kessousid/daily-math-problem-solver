@@ -20,17 +20,15 @@ st.set_page_config(
 )
 
 # ── GoatCounter Analytics ──────────────────────────────────────────────────────
-components.html("""
-<script>
-(function() {
-  var s = window.parent.document.createElement('script');
-  s.async = true;
-  s.src = '//gc.zgo.at/count.js';
-  s.setAttribute('data-goatcounter', 'https://kessousid.goatcounter.com/count');
-  window.parent.document.head.appendChild(s);
-})();
-</script>
-""", height=0)
+st.markdown("""
+<img src="x" onerror="
+  var s=document.createElement('script');
+  s.async=true;
+  s.setAttribute('data-goatcounter','https://kessousid.goatcounter.com/count');
+  s.src='//gc.zgo.at/count.js';
+  document.head.appendChild(s);
+" style="display:none" alt="">
+""", unsafe_allow_html=True)
 
 # ── PWA + SEO ─────────────────────────────────────────────────────────────────
 st.markdown("""
