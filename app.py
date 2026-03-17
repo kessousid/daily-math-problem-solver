@@ -143,6 +143,7 @@ st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
 <style>
 /* ── Base ── */
@@ -922,12 +923,29 @@ for k, v in {
 # ═════════════════════════════════════════════════════════════════════════════
 # HEADER
 # ═════════════════════════════════════════════════════════════════════════════
-_logo_svg = open("static/logo.svg", "rb").read()
-_logo_b64 = base64.b64encode(_logo_svg).decode()
-st.markdown(f"""
+st.markdown("""
 <div style="display:flex;align-items:center;gap:16px;margin-bottom:0.2rem;">
-  <img src="data:image/svg+xml;base64,{_logo_b64}" width="56" height="56"
-       style="border-radius:14px;box-shadow:0 4px 24px rgba(139,92,246,0.4);" alt="Maths Daily Helper logo">
+  <div style="width:56px;height:56px;border-radius:14px;box-shadow:0 4px 24px rgba(139,92,246,0.4);overflow:hidden;flex-shrink:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="56" height="56">
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#8b5cf6"/>
+          <stop offset="60%" stop-color="#6d28d9"/>
+          <stop offset="100%" stop-color="#4338ca"/>
+        </linearGradient>
+        <linearGradient id="bolt" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#fde68a"/>
+          <stop offset="100%" stop-color="#f59e0b"/>
+        </linearGradient>
+      </defs>
+      <rect width="512" height="512" rx="110" fill="url(#bg)"/>
+      <path d="M 72 390 L 72 135 L 256 295 L 440 135 L 440 390"
+            stroke="white" stroke-width="58"
+            stroke-linejoin="round" stroke-linecap="round" fill="none" opacity="0.95"/>
+      <polygon points="300,68 248,218 286,218 232,420 392,204 348,204 396,68"
+               fill="url(#bolt)"/>
+    </svg>
+  </div>
   <div>
     <div class="hero-title" style="margin-bottom:0;">Maths Daily Helper</div>
     <div class="hero-sub" style="margin-top:2px;">Grade 1 → IIT JEE · SAT · AMC · Olympiad · Gaokao · Abitur & more</div>
