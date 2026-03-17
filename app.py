@@ -171,12 +171,20 @@ section[data-testid="stSidebar"] label { color: rgba(226,232,240,0.7) !important
 footer { display: none !important; }
 header[data-testid="stHeader"] { background: transparent !important; }
 
-/* ── Fix keyboard_double icon: force Material Icons font ── */
+/* ── Sidebar collapse button: hide ligature text, show unicode arrow ── */
 [data-testid="collapsedControl"] span,
 [data-testid="stSidebarCollapseButton"] span,
-header button span {
-    font-family: 'Material Icons' !important;
-    font-size: 20px !important;
+[data-testid="baseButton-headerNoPadding"] span,
+section[data-testid="stSidebar"] button span {
+    font-size: 0 !important;
+    color: transparent !important;
+}
+[data-testid="collapsedControl"] span::before,
+[data-testid="stSidebarCollapseButton"] span::before,
+[data-testid="baseButton-headerNoPadding"] span::before,
+section[data-testid="stSidebar"] button span::before {
+    content: "◀";
+    font-size: 18px !important;
     color: rgba(139, 92, 246, 0.8) !important;
 }
 
