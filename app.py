@@ -19,14 +19,14 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Cloudflare Web Analytics ───────────────────────────────────────────────────
+# ── GoatCounter Analytics ──────────────────────────────────────────────────────
 components.html("""
 <script>
 (function() {
   var s = window.parent.document.createElement('script');
-  s.defer = true;
-  s.src = 'https://static.cloudflareinsights.com/beacon.min.js';
-  s.setAttribute('data-cf-beacon', '{"token": "681818aa5f3248c58e22969b6977d9f3"}');
+  s.async = true;
+  s.src = '//gc.zgo.at/count.js';
+  s.setAttribute('data-goatcounter', 'https://kessousid.goatcounter.com/count');
   window.parent.document.head.appendChild(s);
 })();
 </script>
