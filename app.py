@@ -166,12 +166,19 @@ section[data-testid="stSidebar"] {
 section[data-testid="stSidebar"] * { font-family: 'Space Grotesk', sans-serif !important; }
 section[data-testid="stSidebar"] label { color: rgba(226,232,240,0.7) !important; font-size: 0.8rem !important; font-weight: 600 !important; letter-spacing: 0.06em !important; text-transform: uppercase !important; }
 
-/* ── Fix sidebar collapse button (keyboard_double icon) ── */
-[data-testid="collapsedControl"] { display: none !important; }
-[data-testid="stSidebarCollapseButton"] { display: none !important; }
-header[data-testid="stHeader"] { display: none !important; }
+/* ── Hide Streamlit chrome ── */
 #MainMenu { display: none !important; }
 footer { display: none !important; }
+header[data-testid="stHeader"] { background: transparent !important; }
+
+/* ── Fix keyboard_double icon: force Material Icons font ── */
+[data-testid="collapsedControl"] span,
+[data-testid="stSidebarCollapseButton"] span,
+header button span {
+    font-family: 'Material Icons' !important;
+    font-size: 20px !important;
+    color: rgba(139, 92, 246, 0.8) !important;
+}
 
 /* ── Tabs ── */
 .stTabs [data-baseweb="tab-list"] {
