@@ -40,6 +40,8 @@ st.markdown("""
 <meta name="apple-mobile-web-app-title" content="Maths Daily Helper">
 <meta name="theme-color" content="#8b5cf6">
 <link rel="apple-touch-icon" href="/app/static/icon-192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/app/static/icon-32.png">
+<link rel="icon" type="image/svg+xml" href="/app/static/logo.svg">
 
 <!-- SEO: Core -->
 <meta name="description" content="Free AI-powered maths practice for Grade 1 to Grade 12, IIT JEE, BITSAT, Math Olympiad, SAT and more. Get daily problems, hints, step-by-step solutions and full sample papers — powered by Claude AI.">
@@ -920,8 +922,16 @@ for k, v in {
 # ═════════════════════════════════════════════════════════════════════════════
 # HEADER
 # ═════════════════════════════════════════════════════════════════════════════
-st.markdown('<div class="hero-title">⚡ MathDrop</div>', unsafe_allow_html=True)
-st.markdown('<div class="hero-sub">big brain energy · Grade 1 → IIT JEE · SAT · AMC · Olympiad · Gaokao · Abitur & more</div>', unsafe_allow_html=True)
+st.markdown("""
+<div style="display:flex;align-items:center;gap:16px;margin-bottom:0.2rem;">
+  <img src="/app/static/logo.svg" width="56" height="56"
+       style="border-radius:14px;box-shadow:0 4px 24px rgba(139,92,246,0.4);" alt="Maths Daily Helper logo">
+  <div>
+    <div class="hero-title" style="margin-bottom:0;">Maths Daily Helper</div>
+    <div class="hero-sub" style="margin-top:2px;">Grade 1 → IIT JEE · SAT · AMC · Olympiad · Gaokao · Abitur & more</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ═════════════════════════════════════════════════════════════════════════════
 # SIDEBAR (global — always visible)

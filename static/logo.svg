@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="60%" stop-color="#6d28d9"/>
+      <stop offset="100%" stop-color="#4338ca"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="rgba(0,0,0,0.4)"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="110" fill="url(#bg)"/>
+
+  <!-- Subtle grid dots pattern -->
+  <g opacity="0.08" fill="white">
+    <circle cx="80"  cy="80"  r="6"/><circle cx="160" cy="80"  r="6"/>
+    <circle cx="240" cy="80"  r="6"/><circle cx="320" cy="80"  r="6"/>
+    <circle cx="400" cy="80"  r="6"/><circle cx="480" cy="80"  r="6"/>
+    <circle cx="80"  cy="160" r="6"/><circle cx="480" cy="160" r="6"/>
+    <circle cx="80"  cy="240" r="6"/><circle cx="480" cy="240" r="6"/>
+    <circle cx="80"  cy="320" r="6"/><circle cx="480" cy="320" r="6"/>
+    <circle cx="80"  cy="400" r="6"/><circle cx="480" cy="400" r="6"/>
+    <circle cx="80"  cy="480" r="6"/><circle cx="160" cy="480" r="6"/>
+    <circle cx="240" cy="480" r="6"/><circle cx="320" cy="480" r="6"/>
+    <circle cx="400" cy="480" r="6"/><circle cx="480" cy="480" r="6"/>
+  </g>
+
+  <!-- M shape (two triangles + verticals) -->
+  <g filter="url(#shadow)">
+    <path d="M 72 390
+             L 72 135
+             L 256 295
+             L 440 135
+             L 440 390"
+          stroke="white" stroke-width="58"
+          stroke-linejoin="round" stroke-linecap="round"
+          fill="none" opacity="0.95"/>
+  </g>
+
+  <!-- Lightning bolt -->
+  <polygon points="300,68 248,218 286,218 232,420 392,204 348,204 396,68"
+           fill="url(#bolt)" filter="url(#shadow)"/>
+</svg>

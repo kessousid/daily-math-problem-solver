@@ -1,6 +1,6 @@
 {
   "name": "Maths Daily Helper",
-  "short_name": "MathDrop",
+  "short_name": "Maths Helper",
   "description": "AI-powered daily maths practice for Grade 1–12, Olympiad & IIT JEE",
   "start_url": "/",
   "display": "standalone",

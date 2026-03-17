@@ -1,45 +1,67 @@
 """Run this once to generate PWA icons: python generate_icons.py"""
 import struct, zlib, math
 
-def make_png(size, bg=(13, 13, 31), accent=(139, 92, 246)):
-    """Generate a simple purple-gradient icon PNG with a lightning bolt."""
-    pixels = []
-    cx, cy = size // 2, size // 2
-    r = size // 2
+def make_png(size):
+    bg      = (13, 13, 31)
+    purple1 = (139, 92, 246)
+    purple2 = (67, 56, 202)
+    gold1   = (253, 230, 138)
+    gold2   = (245, 158, 11)
 
-    # Lightning bolt path (simplified, pixel-based)
-    bolt = set()
-    scale = size / 100
-    pts = [(55,10),(35,50),(50,50),(45,90),(65,45),(50,45),(55,10)]
-    for i in range(len(pts)-1):
-        x0,y0 = int(pts[i][0]*scale), int(pts[i][1]*scale)
-        x1,y1 = int(pts[i+1][0]*scale), int(pts[i+1][1]*scale)
-        steps = max(abs(x1-x0), abs(y1-y0), 1)
-        for s in range(steps+1):
-            bx = round(x0 + (x1-x0)*s/steps)
-            by = round(y0 + (y1-y0)*s/steps)
-            for dx in range(-max(1,size//40), max(2,size//35)):
-                for dy in range(-max(1,size//40), max(2,size//35)):
-                    bolt.add((bx+dx, by+dy))
+    pixels = []
+    cx, cy = size / 2, size / 2
+    r  = size / 2
+    rr = r * 0.85   # inner radius for rounded square check
+
+    def in_rounded_square(x, y, radius=0.215):
+        nx = (x - cx) / r
+        ny = (y - cy) / r
+        rn = radius
+        # superellipse approximation for rounded square
+        val = abs(nx)**4 + abs(ny)**4
+        return val <= (1 - rn)**4 * 1.6
+
+    def lerp(a, b, t):
+        return int(a + (b - a) * t)
+
+    def lerp_color(c1, c2, t):
+        return (lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t))
+
+    # Lightning bolt polygon points (normalised 0-1)
+    bolt_pts_norm = [(0.586, 0.133), (0.484, 0.426), (0.559, 0.426),
+                     (0.453, 0.820), (0.766, 0.398), (0.680, 0.398), (0.773, 0.133)]
+    bolt_pts = [(int(p[0] * size), int(p[1] * size)) for p in bolt_pts_norm]
+
+    def point_in_polygon(px, py, poly):
+        n = len(poly)
+        inside = False
+        j = n - 1
+        for i in range(n):
+            xi, yi = poly[i]
+            xj, yj = poly[j]
+            if ((yi > py) != (yj > py)) and (px < (xj - xi) * (py - yi) / (yj - yi + 1e-9) + xi):
+                inside = not inside
+            j = i
+        return inside
 
     for y in range(size):
         row = []
         for x in range(size):
-            dx, dy = x - cx, y - cy
-            dist = math.sqrt(dx*dx + dy*dy)
-            # Circular mask
-            if dist > r - 1:
+            if not in_rounded_square(x, y):
                 row += [0, 0, 0, 0]
                 continue
-            # Gradient background: deep purple
-            t = dist / r
-            pr = int(bg[0] + (accent[0]-bg[0]) * (1-t) * 0.4)
-            pg = int(bg[1] + (accent[1]-bg[1]) * (1-t) * 0.4)
-            pb = int(bg[2] + (accent[2]-bg[2]) * (1-t) * 0.6)
+
+            # Background gradient: top-left purple to bottom-right indigo
+            t = ((x + y) / (2 * size))
+            r_val, g_val, b_val = lerp_color(purple1, purple2, t)
+
             # Lightning bolt
-            if (x, y) in bolt:
-                pr, pg, pb = 255, 230, 80  # yellow/gold bolt
-            row += [pr, pg, pb, 255]
+            if point_in_polygon(x, y, bolt_pts):
+                bt = y / size
+                rc, gc, bc = lerp_color(gold1, gold2, bt)
+                row += [rc, gc, bc, 255]
+            else:
+                row += [r_val, g_val, b_val, 255]
         pixels.append(bytes(row))
 
     def make_chunk(tag, data):
@@ -57,11 +79,11 @@ def make_png(size, bg=(13, 13, 31), accent=(139, 92, 246)):
     )
     return png
 
-for sz in [192, 512]:
+for sz in [32, 192, 512]:
     data = make_png(sz)
     path = f'static/icon-{sz}.png'
     with open(path, 'wb') as f:
         f.write(data)
     print(f'Created {path} ({len(data):,} bytes)')
 
-print('Done! Icons saved to static/')
+print('Done!')
