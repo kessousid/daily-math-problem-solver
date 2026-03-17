@@ -922,9 +922,11 @@ for k, v in {
 # ═════════════════════════════════════════════════════════════════════════════
 # HEADER
 # ═════════════════════════════════════════════════════════════════════════════
-st.markdown("""
+_logo_svg = open("static/logo.svg", "rb").read()
+_logo_b64 = base64.b64encode(_logo_svg).decode()
+st.markdown(f"""
 <div style="display:flex;align-items:center;gap:16px;margin-bottom:0.2rem;">
-  <img src="/app/static/logo.svg" width="56" height="56"
+  <img src="data:image/svg+xml;base64,{_logo_b64}" width="56" height="56"
        style="border-radius:14px;box-shadow:0 4px 24px rgba(139,92,246,0.4);" alt="Maths Daily Helper logo">
   <div>
     <div class="hero-title" style="margin-bottom:0;">Maths Daily Helper</div>
