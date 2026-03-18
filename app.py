@@ -889,42 +889,47 @@ def render_math_markdown(text, height=6000):
     """Render markdown+LaTeX using MathJax in an iframe.
     Protects math from markdown mangling before passing to marked.js."""
     json_text = json.dumps(text)
-    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
-<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
-<script>
-MathJax = {{
-  tex: {{ inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true }},
-  options: {{ skipHtmlTags: ['script','noscript','style','textarea','pre'] }}
-}};
-</script>
-<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
-<style>
-  body {{ font-family: 'Segoe UI', Arial, sans-serif; padding: 1rem 1.5rem; color: #1a1a1a; line-height: 1.7; }}
-  h1,h2,h3,h4 {{ color: #1e293b; margin: 1rem 0 .4rem; }}
-  hr {{ border: none; border-top: 1px solid #e2e8f0; margin: .8rem 0; }}
-  strong {{ font-weight: 600; }} p {{ margin: .3rem 0; }}
-</style></head><body>
-<script type="application/json" id="d">{json_text}</script>
-<div id="c"></div>
-<script>
-  var raw = JSON.parse(document.getElementById('d').textContent);
-  var store = {{}}, n = 0;
-  function protect(t) {{
-    t = t.replace(/\$\$([\s\S]*?)\$\$/g, function(m) {{ var k='XX'+n+++'XX'; store[k]=m; return k; }});
-    t = t.replace(/\$([^\n\$]+?)\$/g,    function(m) {{ var k='XX'+n+++'XX'; store[k]=m; return k; }});
-    return t;
-  }}
-  function restore(h) {{
-    for (var k in store) h = h.split(k).join(store[k]);
-    return h;
-  }}
-  document.getElementById('c').innerHTML = restore(marked.parse(protect(raw)));
-  function typeset() {{
-    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([document.getElementById('c')]);
-    else setTimeout(typeset, 400);
-  }}
-  typeset();
-</script></body></html>"""
+    # JS regexes built as plain strings to avoid Python invalid-escape warnings
+    re_display = r"/\$\$([\s\S]*?)\$\$/g"
+    re_inline  = r"/\$([^\n\$]+?)\$/g"
+    html = (
+        "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+        "<script src='https://cdn.jsdelivr.net/npm/marked@9/marked.min.js'></script>"
+        "<script>"
+        "MathJax = {"
+        "  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true },"
+        "  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }"
+        "};"
+        "</script>"
+        "<script async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js'></script>"
+        "<style>"
+        "body { font-family: 'Segoe UI', Arial, sans-serif; padding: 1rem 1.5rem; color: #1a1a1a; line-height: 1.7; }"
+        "h1,h2,h3,h4 { color: #1e293b; margin: 1rem 0 .4rem; }"
+        "hr { border: none; border-top: 1px solid #e2e8f0; margin: .8rem 0; }"
+        "strong { font-weight: 600; } p { margin: .3rem 0; }"
+        "</style></head><body>"
+        f"<script type='application/json' id='d'>{json_text}</script>"
+        "<div id='c'></div>"
+        "<script>"
+        "var raw = JSON.parse(document.getElementById('d').textContent);"
+        "var store = {}, n = 0;"
+        "function protect(t) {"
+        f"  t = t.replace({re_display}, function(m) {{ var k='XX'+n+++'XX'; store[k]=m; return k; }});"
+        f"  t = t.replace({re_inline},  function(m) {{ var k='XX'+n+++'XX'; store[k]=m; return k; }});"
+        "  return t;"
+        "}"
+        "function restore(h) {"
+        "  for (var k in store) h = h.split(k).join(store[k]);"
+        "  return h;"
+        "}"
+        "document.getElementById('c').innerHTML = restore(marked.parse(protect(raw)));"
+        "function typeset() {"
+        "  if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([document.getElementById('c')]);"
+        "  else setTimeout(typeset, 400);"
+        "}"
+        "typeset();"
+        "</script></body></html>"
+    )
     components.html(html, height=height, scrolling=True)
 
 def stream_response(client, prompt, placeholder, max_tokens=1800, image_data=None, media_type=None):
