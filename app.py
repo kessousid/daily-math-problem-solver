@@ -936,6 +936,61 @@ def render_math_markdown(text, height=6000):
     )
     components.html(html, height=height, scrolling=True)
 
+def render_math_box(text, box_type="info", height=None):
+    """Render markdown+LaTeX in a styled dark-theme box using MathJax.
+    Avoids Streamlit's built-in KaTeX which mangles $currency$ as math delimiters."""
+    styles = {
+        "info":    {"bg": "#0a1929", "border": "#1e88e5", "color": "#90caf9"},
+        "warning": {"bg": "#1a1200", "border": "#fb8c00", "color": "#ffe082"},
+        "success": {"bg": "#071a0e", "border": "#43a047", "color": "#a5d6a7"},
+    }
+    s = styles.get(box_type, styles["info"])
+    estimated_h = max(180, min(1600, len(text) // 3 + 200)) if height is None else height
+    json_text = json.dumps(text)
+    re_display = r"/\$\$([\s\S]*?)\$\$/g"
+    re_inline  = r"/\$([^\n\$]+?)\$/g"
+    html = (
+        "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+        "<script src='https://cdn.jsdelivr.net/npm/marked@9/marked.min.js'></script>"
+        "<script>"
+        "MathJax = {"
+        "  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true },"
+        "  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }"
+        "};"
+        "</script>"
+        "<script async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js'></script>"
+        "<style>"
+        f"body {{ font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0.85rem 1.1rem;"
+        f"  background: {s['bg']}; border-left: 4px solid {s['border']}; border-radius: 4px;"
+        f"  color: {s['color']}; line-height: 1.75; font-size: 0.97rem; }}"
+        "p { margin: 0.25rem 0; } strong { font-weight: 600; }"
+        "ol, ul { margin: 0.4rem 0; padding-left: 1.4rem; }"
+        "</style></head><body>"
+        f"<script type='application/json' id='d'>{json_text}</script>"
+        "<div id='c'></div>"
+        "<script>"
+        "var raw = JSON.parse(document.getElementById('d').textContent);"
+        "var store = {}, n = 0;"
+        "function protect(t) {"
+        f"  t = t.replace({re_display}, function(m) {{ var k='XX'+n+++'XX'; store[k]=m; return k; }});"
+        f"  t = t.replace({re_inline},  function(m) {{ var k='XX'+n+++'XX'; store[k]=m; return k; }});"
+        "  return t;"
+        "}"
+        "function restore(h) {"
+        "  for (var k in store) h = h.split(k).join(store[k]);"
+        "  return h;"
+        "}"
+        "document.getElementById('c').innerHTML = restore(marked.parse(protect(raw)));"
+        "function typeset() {"
+        "  if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([document.getElementById('c')]);"
+        "  else setTimeout(typeset, 400);"
+        "}"
+        "typeset();"
+        "</script></body></html>"
+    )
+    components.html(html, height=estimated_h, scrolling=True)
+
+
 def stream_response(client, prompt, placeholder, max_tokens=1800, image_data=None, media_type=None):
     content = []
     if image_data:
@@ -950,7 +1005,7 @@ def stream_response(client, prompt, placeholder, max_tokens=1800, image_data=Non
         ) as stream:
             for text in stream.text_stream:
                 full_text += text
-                placeholder.markdown(full_text + " ▌")
+                placeholder.text(full_text + " ▌")  # plain text avoids partial-LaTeX render errors
         placeholder.empty()
     except anthropic.AuthenticationError:
         st.error("**Invalid API key.** Create a new key at https://console.anthropic.com/settings/keys and update Streamlit Secrets.", icon="🔑")
@@ -1167,7 +1222,7 @@ if st.session_state.active_tab == 0:
             f'<span class="badge badge-topic">📐 {data["subtopic"]}</span>',
             unsafe_allow_html=True)
         st.markdown('<p class="section-label label-problem">📝 Problem</p>', unsafe_allow_html=True)
-        st.info(data["problem"])
+        render_math_box(data["problem"], "info")
 
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -1197,10 +1252,10 @@ if st.session_state.active_tab == 0:
 
         if st.session_state.show_hint and data.get("hint"):
             st.markdown('<p class="section-label label-hint">💡 Hint</p>', unsafe_allow_html=True)
-            st.warning(data["hint"])
+            render_math_box(data["hint"], "warning")
         if st.session_state.show_solution and st.session_state.solution:
             st.markdown('<p class="section-label label-solution">✅ Solution & Explanation</p>', unsafe_allow_html=True)
-            st.success(st.session_state.solution)
+            render_math_box(st.session_state.solution, "success")
     else:
         st.markdown("""
 <div style="text-align:center;padding:2rem 0 1rem;">
@@ -1376,7 +1431,7 @@ elif st.session_state.active_tab == 2:
 
     if st.session_state.doubt_response:
         st.markdown('<p class="section-label label-solution">✅ AI Explanation</p>', unsafe_allow_html=True)
-        st.success(st.session_state.doubt_response)
+        render_math_box(st.session_state.doubt_response, "success")
         if st.button("🔄 Clear & Ask Another", key="doubt_clear"):
             st.session_state.doubt_response = None
             st.rerun()
