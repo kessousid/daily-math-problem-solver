@@ -4,6 +4,7 @@ import re
 import json
 import base64
 import io
+import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -1032,7 +1033,7 @@ st.markdown("""
 # ═════════════════════════════════════════════════════════════════════════════
 def send_contact_email(name, email, topic, issue_type, message):
     try:
-        pwd = st.secrets.get("SUPPORT_EMAIL_PASSWORD", "")
+        pwd = os.environ.get("SUPPORT_EMAIL_PASSWORD", "")
         if not pwd:
             return False, "Email service not configured. Please try again later."
         msg = MIMEMultipart()
