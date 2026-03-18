@@ -1109,15 +1109,7 @@ with st.sidebar:
         st.divider()
         st.markdown("<div style='color:rgba(226,232,240,0.4);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;'>📬 Contact Us</div>", unsafe_allow_html=True)
 
-        # Show confirmation outside the form so it persists after submit
-        if st.session_state.get("contact_status") == "success":
-            st.success("✅ Message sent! We'll get back to you soon.")
-            st.session_state.contact_status = None
-        elif st.session_state.get("contact_status") == "error":
-            st.error(f"Failed to send: {st.session_state.get('contact_error', '')}")
-            st.session_state.contact_status = None
-
-        with st.form("contact_form", clear_on_submit=True):
+        with st.form("contact_form", clear_on_submit=False):
             c_name  = st.text_input("Your Name")
             c_email = st.text_input("Your Email")
             c_topic = st.selectbox("Topic", [
@@ -1128,17 +1120,20 @@ with st.sidebar:
                 "Question", "Problem not loading", "Wrong answer / solution",
                 "Missing topic", "App crash", "Suggestion", "Other"
             ])
-            c_msg   = st.text_area("Message", height=100)
-            submitted = st.form_submit_button("Send Message", use_container_width=True, type="primary")
+            c_msg      = st.text_area("Message", height=100)
+            submitted  = st.form_submit_button("Send Message", use_container_width=True, type="primary")
             if submitted:
                 if not c_name.strip() or not c_email.strip() or not c_msg.strip():
                     st.warning("Please fill in Name, Email and Message.")
                 else:
-                    ok, info = send_contact_email(c_name.strip(), c_email.strip(), c_topic, c_issue, c_msg.strip())
-                    st.session_state.contact_status = "success" if ok else "error"
-                    if not ok:
-                        st.session_state.contact_error = info
-                    st.rerun()
+                    with st.spinner("Sending…"):
+                        ok, info = send_contact_email(
+                            c_name.strip(), c_email.strip(), c_topic, c_issue, c_msg.strip()
+                        )
+                    if ok:
+                        st.success("✅ Sent! We'll get back to you soon.")
+                    else:
+                        st.error(f"Could not send: {info}")
 
 # ═════════════════════════════════════════════════════════════════════════════
 # CUSTOM TABS
