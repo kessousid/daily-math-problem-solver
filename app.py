@@ -170,15 +170,13 @@ header[data-testid="stHeader"] { background: transparent !important; }
 /* ── Sidebar collapse button: hide ligature text, show unicode arrow ── */
 [data-testid="collapsedControl"] span,
 [data-testid="stSidebarCollapseButton"] span,
-[data-testid="baseButton-headerNoPadding"] span,
-section[data-testid="stSidebar"] button span {
+[data-testid="baseButton-headerNoPadding"] span {
     font-size: 0 !important;
     color: transparent !important;
 }
 [data-testid="collapsedControl"] span::before,
 [data-testid="stSidebarCollapseButton"] span::before,
-[data-testid="baseButton-headerNoPadding"] span::before,
-section[data-testid="stSidebar"] button span::before {
+[data-testid="baseButton-headerNoPadding"] span::before {
     content: "◀";
     font-size: 18px !important;
     color: rgba(139, 92, 246, 0.8) !important;
