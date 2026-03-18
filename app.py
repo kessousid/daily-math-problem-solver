@@ -4,6 +4,9 @@ import re
 import json
 import base64
 import io
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import streamlit.components.v1 as components
 
 try:
@@ -1024,6 +1027,33 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ═════════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
+# CONTACT EMAIL
+# ═════════════════════════════════════════════════════════════════════════════
+def send_contact_email(name, email, topic, issue_type, message):
+    try:
+        pwd = st.secrets.get("SUPPORT_EMAIL_PASSWORD", "")
+        if not pwd:
+            return False, "Email service not configured. Please try again later."
+        msg = MIMEMultipart()
+        msg["From"]    = "support@mathsdailyhelper.com"
+        msg["To"]      = "support@mathsdailyhelper.com"
+        msg["Subject"] = f"[{issue_type}] {topic} — from {name}"
+        body = (
+            f"Name:       {name}\n"
+            f"Email:      {email}\n"
+            f"Topic:      {topic}\n"
+            f"Issue Type: {issue_type}\n\n"
+            f"Message:\n{message}"
+        )
+        msg.attach(MIMEText(body, "plain"))
+        with smtplib.SMTP_SSL("smtp.secureserver.net", 465) as srv:
+            srv.login("support@mathsdailyhelper.com", pwd)
+            srv.send_message(msg)
+        return True, "Message sent!"
+    except Exception as e:
+        return False, str(e)
+
 # SIDEBAR (global — always visible)
 # ═════════════════════════════════════════════════════════════════════════════
 with st.sidebar:
@@ -1066,6 +1096,31 @@ with st.sidebar:
         st.divider()
         st.markdown("<div style='color:rgba(226,232,240,0.4);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;'>Pro Tips</div>", unsafe_allow_html=True)
         st.markdown("<div style='color:rgba(226,232,240,0.55);font-size:0.82rem;line-height:1.7;'>🎯 Always try before hitting hint<br>🧠 Understand the <em>why</em>, not just the answer<br>📈 Level up difficulty once you're comfortable</div>", unsafe_allow_html=True)
+
+        st.divider()
+        st.markdown("<div style='color:rgba(226,232,240,0.4);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;'>📬 Contact Us</div>", unsafe_allow_html=True)
+        with st.form("contact_form", clear_on_submit=True):
+            c_name  = st.text_input("Your Name")
+            c_email = st.text_input("Your Email")
+            c_topic = st.selectbox("Topic", [
+                "General Query", "Bug Report", "Feature Request",
+                "Content Issue", "Billing / Subscription", "Other"
+            ])
+            c_issue = st.selectbox("Type of Issue", [
+                "Question", "Problem not loading", "Wrong answer / solution",
+                "Missing topic", "App crash", "Suggestion", "Other"
+            ])
+            c_msg   = st.text_area("Message", height=100)
+            submitted = st.form_submit_button("Send Message", use_container_width=True, type="primary")
+            if submitted:
+                if not c_name.strip() or not c_email.strip() or not c_msg.strip():
+                    st.warning("Please fill in Name, Email and Message.")
+                else:
+                    ok, info = send_contact_email(c_name.strip(), c_email.strip(), c_topic, c_issue, c_msg.strip())
+                    if ok:
+                        st.success("✅ Message sent! We'll get back to you soon.")
+                    else:
+                        st.error(f"Failed to send: {info}")
 
 # ═════════════════════════════════════════════════════════════════════════════
 # CUSTOM TABS
