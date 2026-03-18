@@ -1048,9 +1048,17 @@ def send_contact_email(name, email, topic, issue_type, message):
             f"Message:\n{message}"
         )
         msg.attach(MIMEText(body, "plain"))
-        with smtplib.SMTP_SSL("smtp.secureserver.net", 465) as srv:
-            srv.login("support@mathsdailyhelper.com", pwd)
-            srv.send_message(msg)
+        # Try port 465 (SSL) first, fall back to 587 (STARTTLS)
+        try:
+            with smtplib.SMTP_SSL("smtp.secureserver.net", 465) as srv:
+                srv.login("support@mathsdailyhelper.com", pwd)
+                srv.send_message(msg)
+        except Exception:
+            with smtplib.SMTP("smtp.secureserver.net", 587) as srv:
+                srv.ehlo()
+                srv.starttls()
+                srv.login("support@mathsdailyhelper.com", pwd)
+                srv.send_message(msg)
         return True, "Message sent!"
     except Exception as e:
         return False, str(e)
@@ -1100,6 +1108,15 @@ with st.sidebar:
 
         st.divider()
         st.markdown("<div style='color:rgba(226,232,240,0.4);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;'>📬 Contact Us</div>", unsafe_allow_html=True)
+
+        # Show confirmation outside the form so it persists after submit
+        if st.session_state.get("contact_status") == "success":
+            st.success("✅ Message sent! We'll get back to you soon.")
+            st.session_state.contact_status = None
+        elif st.session_state.get("contact_status") == "error":
+            st.error(f"Failed to send: {st.session_state.get('contact_error', '')}")
+            st.session_state.contact_status = None
+
         with st.form("contact_form", clear_on_submit=True):
             c_name  = st.text_input("Your Name")
             c_email = st.text_input("Your Email")
@@ -1118,10 +1135,10 @@ with st.sidebar:
                     st.warning("Please fill in Name, Email and Message.")
                 else:
                     ok, info = send_contact_email(c_name.strip(), c_email.strip(), c_topic, c_issue, c_msg.strip())
-                    if ok:
-                        st.success("✅ Message sent! We'll get back to you soon.")
-                    else:
-                        st.error(f"Failed to send: {info}")
+                    st.session_state.contact_status = "success" if ok else "error"
+                    if not ok:
+                        st.session_state.contact_error = info
+                    st.rerun()
 
 # ═════════════════════════════════════════════════════════════════════════════
 # CUSTOM TABS
