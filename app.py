@@ -20,15 +20,10 @@ st.set_page_config(
 )
 
 # ── GoatCounter Analytics ──────────────────────────────────────────────────────
-st.markdown("""
-<img src="x" onerror="
-  var s=document.createElement('script');
-  s.async=true;
-  s.setAttribute('data-goatcounter','https://kessousid.goatcounter.com/count');
-  s.src='//gc.zgo.at/count.js';
-  document.head.appendChild(s);
-" style="display:none" alt="">
-""", unsafe_allow_html=True)
+components.html("""
+<script data-goatcounter="https://kessousid.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+""", height=0)
 
 # ── PWA + SEO ─────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -754,7 +749,10 @@ PAPER_YEARS = [str(y) for y in range(2024, 2014, -1)]
 LATEX_RULES = """
 MANDATORY LATEX FORMATTING — no exceptions:
 - $...$ for inline math (all variables, expressions, numbers in equations)
-- $$...$$ for display/standalone equations
+- $$...$$ for display/standalone equations — MANDATORY for ALL multi-line environments:
+  $$\\begin{cases}...\\end{cases}$$  $$\\begin{pmatrix}...\\end{pmatrix}$$
+  $$\\begin{align}...\\end{align}$$  $$\\begin{bmatrix}...\\end{bmatrix}$$
+  NEVER wrap these inside single $...$, always use $$...$$
 - NEVER write math as English words:
   ✗ "x squared" → ✓ $x^2$      ✗ "integral of f(x)" → ✓ $\\int f(x)\\,dx$
   ✗ "sqrt of 2" → ✓ $\\sqrt{2}$ ✗ "pi" → ✓ $\\pi$    ✗ "infinity" → ✓ $\\infty$
@@ -886,6 +884,15 @@ If the question has multiple parts, address each part separately."""
 # ═════════════════════════════════════════════════════════════════════════════
 # STREAM + PARSE HELPERS
 # ═════════════════════════════════════════════════════════════════════════════
+def fix_latex(text):
+    """Promote multi-line LaTeX environments from $...$ to $$...$$ so KaTeX renders them."""
+    envs = r'(?:cases|pmatrix|bmatrix|vmatrix|matrix|align\*?|alignat\*?|gather\*?|multline\*?|array)'
+    return re.sub(
+        r'(?<!\$)\$(\s*\\begin\{' + envs + r'\}[\s\S]*?\\end\{' + envs + r'\}\s*)\$(?!\$)',
+        r'$$\1$$',
+        text
+    )
+
 def stream_response(client, prompt, placeholder, max_tokens=1800, image_data=None, media_type=None):
     content = []
     if image_data:
@@ -1148,7 +1155,7 @@ elif st.session_state.active_tab == 1:
         client = get_client()
         st.info("⏳ Generating your paper — this may take up to 60 seconds for a full paper…", icon="🔄")
         ph = st.empty()
-        paper = stream_response(client, build_paper_prompt(p_grade, p_board, p_year, topics_note), ph, max_tokens=4096)
+        paper = stream_response(client, build_paper_prompt(p_grade, p_board, p_year, topics_note), ph, max_tokens=8192)
         st.session_state.paper_text = paper
         st.session_state.paper_meta = {"grade": p_grade, "board": p_board, "year": p_year}
         st.rerun()
@@ -1159,7 +1166,7 @@ elif st.session_state.active_tab == 1:
             <h3 style="margin:0;color:white;">📄 {meta.get('board','')} &nbsp;|&nbsp; {meta.get('grade','')}</h3>
             <p style="margin:.3rem 0 0;opacity:.75;font-size:.9rem;">{meta.get('year','')} — AI-Generated Practice Paper</p>
         </div>""", unsafe_allow_html=True)
-        st.markdown(st.session_state.paper_text)
+        st.markdown(fix_latex(st.session_state.paper_text))
         st.divider()
         cs1, cs2 = st.columns(2)
         with cs1:
@@ -1170,7 +1177,7 @@ elif st.session_state.active_tab == 1:
                     st.info("⏳ Generating full solutions…", icon="🔄")
                     ph = st.empty()
                     sols = stream_response(client, build_paper_solutions_prompt(
-                        st.session_state.paper_text, meta.get("grade",""), meta.get("board","")), ph, max_tokens=4096)
+                        st.session_state.paper_text, meta.get("grade",""), meta.get("board","")), ph, max_tokens=8192)
                     st.session_state.paper_solutions = sols
                     st.rerun()
         with cs2:
@@ -1180,7 +1187,7 @@ elif st.session_state.active_tab == 1:
 
         if st.session_state.show_paper_solutions and st.session_state.paper_solutions:
             st.markdown('<p class="section-label label-solution">✅ Complete Solutions & Marking Scheme</p>', unsafe_allow_html=True)
-            st.success(st.session_state.paper_solutions)
+            st.success(fix_latex(st.session_state.paper_solutions))
     else:
         st.markdown("""
 **How it works:**
