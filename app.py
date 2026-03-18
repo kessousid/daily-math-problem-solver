@@ -5,9 +5,7 @@ import json
 import base64
 import io
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import requests as _requests
 import streamlit.components.v1 as components
 
 try:
@@ -1033,13 +1031,9 @@ st.markdown("""
 # ═════════════════════════════════════════════════════════════════════════════
 def send_contact_email(name, email, topic, issue_type, message):
     try:
-        pwd = os.environ.get("SUPPORT_EMAIL_PASSWORD", "")
-        if not pwd:
-            return False, "Email service not configured. Please try again later."
-        msg = MIMEMultipart()
-        msg["From"]    = "support@mathsdailyhelper.com"
-        msg["To"]      = "support@mathsdailyhelper.com"
-        msg["Subject"] = f"[{issue_type}] {topic} — from {name}"
+        api_key = os.environ.get("RESEND_API_KEY", "")
+        if not api_key:
+            return False, "Email service not configured."
         body = (
             f"Name:       {name}\n"
             f"Email:      {email}\n"
@@ -1047,19 +1041,21 @@ def send_contact_email(name, email, topic, issue_type, message):
             f"Issue Type: {issue_type}\n\n"
             f"Message:\n{message}"
         )
-        msg.attach(MIMEText(body, "plain"))
-        # Try port 465 (SSL) first, fall back to 587 (STARTTLS)
-        try:
-            with smtplib.SMTP_SSL("smtp.secureserver.net", 465) as srv:
-                srv.login("support@mathsdailyhelper.com", pwd)
-                srv.send_message(msg)
-        except Exception:
-            with smtplib.SMTP("smtp.secureserver.net", 587) as srv:
-                srv.ehlo()
-                srv.starttls()
-                srv.login("support@mathsdailyhelper.com", pwd)
-                srv.send_message(msg)
-        return True, "Message sent!"
+        resp = _requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "from": "Maths Daily Helper <support@mathsdailyhelper.com>",
+                "to": ["support@mathsdailyhelper.com"],
+                "reply_to": email,
+                "subject": f"[{issue_type}] {topic} — from {name}",
+                "text": body,
+            },
+            timeout=15,
+        )
+        if resp.status_code in (200, 201):
+            return True, "Sent"
+        return False, resp.text
     except Exception as e:
         return False, str(e)
 
