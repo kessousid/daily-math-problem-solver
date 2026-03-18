@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- SEO: Core -->
+  <title>Maths Daily Helper – Free AI Math Practice for Grade 1–12, IIT JEE, SAT & Olympiad</title>
+  <meta name="description" content="Free AI-powered math practice for every student worldwide. Daily problems, hints and step-by-step solutions for Grade 1–12, IIT JEE, SAT, GCSE, A-Level, Math Olympiad, AMC, AIME and more — powered by Claude AI.">
+  <meta name="keywords" content="free maths practice, AI math tutor, IIT JEE maths problems, SAT math practice, GCSE maths, math olympiad problems, grade 1 to 12 maths, CBSE maths, ICSE maths, step by step math solutions, AMC practice, AIME problems, A-level maths, IB mathematics, daily math problems">
+  <meta name="author" content="Maths Daily Helper">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://www.mathsdailyhelper.com/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.mathsdailyhelper.com/">
+  <meta property="og:title" content="Maths Daily Helper – Free AI Math Practice for Grade 1–12, IIT JEE, SAT & Olympiad">
+  <meta property="og:description" content="Free AI-powered math practice for every student worldwide. Problems, hints and step-by-step solutions — from Grade 1 arithmetic to IIT JEE calculus and Math Olympiad.">
+  <meta property="og:image" content="https://www.mathsdailyhelper.com/app/static/icon-512.png">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Maths Daily Helper – Free AI Math Practice">
+  <meta name="twitter:description" content="Daily math problems, hints and step-by-step solutions for Grade 1–12, IIT JEE, SAT, GCSE, Olympiad and more. 100% free.">
+  <meta name="twitter:image" content="https://www.mathsdailyhelper.com/app/static/icon-512.png">
+
+  <!-- Structured data -->
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Maths Daily Helper",
+      "url": "https://www.mathsdailyhelper.com",
+      "description": "Free AI-powered math practice for Grade 1 to Grade 12, IIT JEE, BITSAT, Math Olympiad, SAT, ACT, GCSE, A-Level, IB and more. Daily problems, hints and step-by-step solutions.",
+      "applicationCategory": "EducationApplication",
+      "operatingSystem": "All",
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+      "audience": {"@type": "EducationalAudience", "educationalRole": "student"},
+      "featureList": [
+        "AI-generated math problems",
+        "Step-by-step solutions",
+        "Grade 1 to Grade 12 coverage",
+        "IIT JEE preparation",
+        "SAT and ACT math practice",
+        "GCSE and A-Level maths",
+        "Math Olympiad problems",
+        "AMC 8, AMC 10, AMC 12, AIME",
+        "Photo and PDF question upload",
+        "Full exam paper generation",
+        "Hints system",
+        "CBSE and ICSE curriculum"
+      ]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is Maths Daily Helper free?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes, Maths Daily Helper is 100% free — no sign-up, no subscription, no credit card required. Every feature is available at no cost."}
+        },
+        {
+          "@type": "Question",
+          "name": "Which grades does Maths Daily Helper support?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Grade 1 through Grade 12, plus IIT JEE, BITSAT, SAT, ACT, GCSE, A-Level, IB Mathematics, Math Olympiad, AMC 8/10/12, and AIME."}
+        },
+        {
+          "@type": "Question",
+          "name": "Can I use it for IIT JEE preparation?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. Select IIT JEE as your level and choose from calculus, coordinate geometry, complex numbers, probability, and more. The AI generates JEE-style problems with full step-by-step solutions."}
+        },
+        {
+          "@type": "Question",
+          "name": "Is it useful for SAT Math preparation?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. Select SAT to get algebra, advanced math, problem-solving, and data analysis questions in SAT format, all with worked solutions."}
+        },
+        {
+          "@type": "Question",
+          "name": "Does it support CBSE and ICSE?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. Problems follow CBSE and ICSE curriculum for every class from Class 1 to Class 12, including NCERT-aligned questions."}
+        },
+        {
+          "@type": "Question",
+          "name": "Can I practice Math Olympiad problems?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. Choose Olympiad difficulty for competition-style problems covering number theory, combinatorics, geometry proofs, and inequalities — suitable for IMO, AMC, AIME, RMO, and similar contests."}
+        },
+        {
+          "@type": "Question",
+          "name": "Can I upload a photo of a math problem and get a solution?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. Upload a photo (JPG or PNG) or a PDF of any math problem and get a full step-by-step AI explanation instantly."}
+        },
+        {
+          "@type": "Question",
+          "name": "Does it support GCSE and A-Level maths?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. UK students can select GCSE or A-Level and practise topics aligned with AQA, Edexcel, and OCR specifications including pure maths, mechanics, and statistics."}
+        },
+        {
+          "@type": "Question",
+          "name": "Can primary school children use this?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. Grade 1 to Grade 5 support includes age-appropriate problems on counting, addition, subtraction, multiplication, division, fractions, and basic geometry."}
+        },
+        {
+          "@type": "Question",
+          "name": "What AI powers Maths Daily Helper?",
+          "acceptedAnswer": {"@type": "Answer", "text": "All problems and solutions are generated by Claude AI, built by Anthropic — known for strong mathematical reasoning and clear explanations."}
+        }
+      ]
+    }
+  ]
+  </script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --purple: #8b5cf6;
+      --purple-dark: #7c3aed;
+      --pink: #ec4899;
+      --cyan: #06b6d4;
+      --bg: #0d0d1f;
+      --surface: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.08);
+      --border-purple: rgba(139,92,246,0.25);
+      --text: #e2e8f0;
+      --text-muted: rgba(226,232,240,0.65);
+      --text-faint: rgba(226,232,240,0.4);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse at 15% 20%, rgba(139,92,246,0.18) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 10%, rgba(236,72,153,0.12) 0%, transparent 55%),
+        radial-gradient(ellipse at 60% 80%, rgba(6,182,212,0.08) 0%, transparent 55%);
+      color: var(--text);
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(20px);
+      background: rgba(13,13,31,0.85);
+      border-bottom: 1px solid var(--border-purple);
+      padding: 0.9rem 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-brand { font-size: 1.1rem; font-weight: 700; color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 0.5rem; }
+    .nav-brand span { background: linear-gradient(135deg, var(--purple), var(--pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .nav-cta {
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      color: #fff; font-weight: 700; font-size: 0.88rem;
+      padding: 0.5rem 1.3rem; border-radius: 10px;
+      text-decoration: none; transition: opacity 0.2s, transform 0.2s;
+      white-space: nowrap;
+    }
+    .nav-cta:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 5rem 2rem 3.5rem;
+      max-width: 820px; margin: 0 auto;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(139,92,246,0.12);
+      border: 1px solid var(--border-purple);
+      border-radius: 99px;
+      padding: 0.3rem 1rem;
+      font-size: 0.82rem; font-weight: 600;
+      color: #c4b5fd;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.04em;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800; line-height: 1.2;
+      margin-bottom: 1.2rem;
+    }
+    .hero h1 .grad {
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero p {
+      font-size: 1.1rem; color: var(--text-muted);
+      max-width: 620px; margin: 0 auto 2rem;
+    }
+    .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      color: #fff; font-weight: 700; font-size: 1rem;
+      padding: 0.85rem 2rem; border-radius: 14px;
+      text-decoration: none; transition: all 0.25s;
+      box-shadow: 0 4px 20px rgba(139,92,246,0.45);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(139,92,246,0.6); }
+    .btn-secondary {
+      background: rgba(139,92,246,0.1);
+      border: 1px solid var(--border-purple);
+      color: #c4b5fd; font-weight: 600; font-size: 1rem;
+      padding: 0.85rem 2rem; border-radius: 14px;
+      text-decoration: none; transition: all 0.25s;
+    }
+    .btn-secondary:hover { background: rgba(139,92,246,0.2); transform: translateY(-2px); }
+
+    /* ── Stats strip ── */
+    .stats {
+      display: flex; justify-content: center; gap: 2.5rem; flex-wrap: wrap;
+      padding: 2rem 2rem 3rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .stat { text-align: center; }
+    .stat-num { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, var(--purple), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .stat-label { font-size: 0.82rem; color: var(--text-muted); font-weight: 500; }
+
+    /* ── Sections ── */
+    section { max-width: 980px; margin: 0 auto; padding: 3.5rem 2rem; }
+    section + section { border-top: 1px solid var(--border); }
+    h2.section-title {
+      font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #e2e8f0, #c4b5fd);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .section-sub { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.97rem; }
+
+    /* ── Feature cards ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.2rem 1.3rem;
+      transition: border-color 0.2s;
+    }
+    .feature-card:hover { border-color: var(--border-purple); }
+    .feature-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .feature-card h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-bottom: 0.3rem; }
+    .feature-card p { font-size: 0.85rem; color: var(--text-muted); }
+
+    /* ── Exam grid ── */
+    .exam-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    .exam-card {
+      background: rgba(139,92,246,0.06);
+      border: 1px solid var(--border-purple);
+      border-radius: 14px;
+      padding: 1.2rem 1.3rem;
+    }
+    .exam-card strong { display: block; font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 0.6rem; }
+    .exam-card ul { padding-left: 1.1rem; color: var(--text-muted); font-size: 0.875rem; line-height: 1.9; }
+
+    /* ── How it works ── */
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; }
+    .step { text-align: center; padding: 0.5rem; }
+    .step-num {
+      width: 2.5rem; height: 2.5rem; border-radius: 50%;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1rem; color: #fff;
+      margin: 0 auto 0.75rem;
+    }
+    .step h3 { font-size: 0.97rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .step p { font-size: 0.85rem; color: var(--text-muted); }
+
+    /* ── Topics ── */
+    .topics-text { color: var(--text-muted); font-size: 0.95rem; line-height: 2; }
+    .topics-text strong { color: var(--text); }
+
+    /* ── FAQ ── */
+    .faq-list { display: flex; flex-direction: column; gap: 0.6rem; }
+    details {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0;
+      transition: border-color 0.2s;
+    }
+    details[open] { border-color: var(--border-purple); }
+    details summary {
+      cursor: pointer;
+      padding: 1rem 1.2rem;
+      font-weight: 600; font-size: 0.97rem;
+      color: var(--text);
+      list-style: none;
+      display: flex; justify-content: space-between; align-items: center;
+      user-select: none;
+    }
+    details summary::-webkit-details-marker { display: none; }
+    details summary::after {
+      content: "+"; font-size: 1.2rem; color: var(--purple);
+      transition: transform 0.2s; flex-shrink: 0;
+    }
+    details[open] summary::after { transform: rotate(45deg); }
+    details .faq-body {
+      padding: 0 1.2rem 1rem;
+      color: var(--text-muted); font-size: 0.92rem; line-height: 1.75;
+      border-top: 1px solid var(--border);
+      padding-top: 0.75rem;
+    }
+
+    /* ── CTA banner ── */
+    .cta-banner {
+      text-align: center;
+      background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(236,72,153,0.1));
+      border: 1px solid var(--border-purple);
+      border-radius: 20px;
+      padding: 3rem 2rem;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    .cta-banner h2 { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.75rem; }
+    .cta-banner p { color: var(--text-muted); margin-bottom: 1.75rem; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-faint);
+      font-size: 0.82rem;
+    }
+    footer a { color: #c4b5fd; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      .hero { padding: 3.5rem 1.25rem 2.5rem; }
+      .stats { gap: 1.5rem; }
+      nav { padding: 0.75rem 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a href="/" class="nav-brand">⚡ <span>Maths Daily Helper</span></a>
+  <a href="https://app.mathsdailyhelper.com" class="nav-cta">Open App →</a>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-badge">100% Free · No Sign-up Required</div>
+  <h1>AI Math Practice for <span class="grad">Every Student,<br>Everywhere</span></h1>
+  <p>
+    Daily problems, instant hints, and step-by-step solutions for
+    Grade 1–12, IIT JEE, SAT, GCSE, A-Level, Math Olympiad, AMC, AIME and more —
+    powered by Claude AI.
+  </p>
+  <div class="hero-btns">
+    <a href="https://app.mathsdailyhelper.com" class="btn-primary">Start Practising Free →</a>
+    <a href="#exams" class="btn-secondary">See Exams Covered</a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="stat"><div class="stat-num">12+</div><div class="stat-label">Grade Levels</div></div>
+  <div class="stat"><div class="stat-num">20+</div><div class="stat-label">Exams &amp; Curricula</div></div>
+  <div class="stat"><div class="stat-num">50+</div><div class="stat-label">Math Topics</div></div>
+  <div class="stat"><div class="stat-num">∞</div><div class="stat-label">Unique Problems</div></div>
+</div>
+
+<!-- Features -->
+<section id="features">
+  <h2 class="section-title">Everything you need to master maths</h2>
+  <p class="section-sub">One tool, every level, every exam.</p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🎯</div>
+      <h3>Targeted Problems</h3>
+      <p>Pick your grade, topic, subtopic and difficulty. Get a unique problem every time.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💡</div>
+      <h3>Smart Hints</h3>
+      <p>Stuck? Get a nudge without seeing the full answer. Learn to think, not just copy.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📐</div>
+      <h3>Step-by-Step Solutions</h3>
+      <p>Full worked solutions with clear explanations at every step.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📄</div>
+      <h3>Full Exam Papers</h3>
+      <p>Generate a complete 10–30 question sample paper for timed practice.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📷</div>
+      <h3>Photo &amp; PDF Upload</h3>
+      <p>Snap a photo of any problem or upload a PDF and get an instant AI explanation.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌍</div>
+      <h3>Global Curricula</h3>
+      <p>CBSE, ICSE, GCSE, IB, Cambridge, Common Core, and more.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Exams -->
+<section id="exams">
+  <h2 class="section-title">Exams &amp; Curricula Supported</h2>
+  <p class="section-sub">From primary school arithmetic to international olympiads — we've got you covered.</p>
+  <div class="exam-grid">
+
+    <div class="exam-card">
+      <strong>🇮🇳 India</strong>
+      <ul>
+        <li>CBSE Class 1–12</li>
+        <li>ICSE / ISC</li>
+        <li>IIT JEE Main &amp; Advanced</li>
+        <li>BITSAT</li>
+        <li>WBJEE, MHT CET, KCET</li>
+        <li>NTSE, KVPY Maths</li>
+        <li>RMO / INMO / IMO (India)</li>
+      </ul>
+    </div>
+
+    <div class="exam-card">
+      <strong>🇺🇸 United States</strong>
+      <ul>
+        <li>SAT Math</li>
+        <li>ACT Mathematics</li>
+        <li>AMC 8, AMC 10, AMC 12</li>
+        <li>AIME</li>
+        <li>MATHCOUNTS</li>
+        <li>AP Calculus AB / BC</li>
+        <li>AP Statistics</li>
+        <li>Common Core Grade 1–12</li>
+      </ul>
+    </div>
+
+    <div class="exam-card">
+      <strong>🇬🇧 United Kingdom</strong>
+      <ul>
+        <li>GCSE Maths (AQA, Edexcel, OCR)</li>
+        <li>A-Level Maths &amp; Further Maths</li>
+        <li>Junior / Intermediate / Senior Math Challenge</li>
+        <li>UK Math Olympiad</li>
+        <li>Key Stage 1, 2, 3, 4</li>
+      </ul>
+    </div>
+
+    <div class="exam-card">
+      <strong>🌐 International</strong>
+      <ul>
+        <li>IB Mathematics SL &amp; HL</li>
+        <li>Cambridge IGCSE &amp; A-Level</li>
+        <li>International Math Olympiad (IMO)</li>
+        <li>Australian AMC &amp; HSC</li>
+        <li>Canadian Gauss, Cayley &amp; Fermat</li>
+        <li>Singapore O-Level &amp; A-Level</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<!-- Topics -->
+<section id="topics">
+  <h2 class="section-title">Math Topics Covered</h2>
+  <p class="section-sub">Every topic from primary school to university entrance.</p>
+  <p class="topics-text">
+    <strong>Number sense &amp; arithmetic</strong> (counting, addition, subtraction, multiplication, division) ·
+    <strong>Fractions, decimals &amp; percentages</strong> ·
+    <strong>Algebra</strong> (linear equations, simultaneous equations, quadratics, polynomials, functions, inequalities) ·
+    <strong>Geometry</strong> (2D shapes, triangles, circles, coordinate geometry, 3D solids, proofs) ·
+    <strong>Trigonometry</strong> (ratios, identities, inverse functions, applications) ·
+    <strong>Calculus</strong> (limits, differentiation, integration, differential equations) ·
+    <strong>Statistics &amp; probability</strong> (data analysis, distributions, Bayes' theorem) ·
+    <strong>Number theory</strong> (primes, divisibility, modular arithmetic, GCD &amp; LCM) ·
+    <strong>Combinatorics &amp; permutations</strong> ·
+    <strong>Matrices &amp; vectors</strong> ·
+    <strong>Complex numbers</strong> ·
+    <strong>Sequences &amp; series</strong> (arithmetic, geometric, binomial theorem) ·
+    <strong>Olympiad problem-solving</strong> (inequalities, functional equations, graph theory, mathematical induction)
+  </p>
+</section>
+
+<!-- How it works -->
+<section id="how-it-works">
+  <h2 class="section-title">How It Works</h2>
+  <p class="section-sub">Three steps to better maths.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Choose Your Level</h3>
+      <p>Select your grade (1–12), exam type (IIT JEE, SAT, GCSE…) and topic.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Get a Problem</h3>
+      <p>The AI generates a fresh, unique question tailored to your selection and difficulty.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Learn from the Solution</h3>
+      <p>Request a hint if stuck, then reveal the full step-by-step solution with explanations.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <h3>Upload Your Doubts</h3>
+      <p>Photo or PDF of any problem — get an instant AI explanation in seconds.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <h2 class="section-title">Frequently Asked Questions</h2>
+  <p class="section-sub">Everything you need to know.</p>
+  <div class="faq-list">
+
+    <details>
+      <summary>Is Maths Daily Helper completely free?</summary>
+      <div class="faq-body">Yes. Maths Daily Helper is 100% free — no sign-up, no subscription, no credit card. Every feature including problem generation, hints, step-by-step solutions, exam paper generation, and photo upload is available at no cost.</div>
+    </details>
+
+    <details>
+      <summary>Which grade levels does it support?</summary>
+      <div class="faq-body">Grade 1 through Grade 12, plus university-entry and competitive exam levels: IIT JEE, BITSAT, SAT, ACT, GCSE, A-Level, IB Mathematics, Cambridge IGCSE, Math Olympiad, AMC 8/10/12, and AIME.</div>
+    </details>
+
+    <details>
+      <summary>Can I use it to prepare for IIT JEE?</summary>
+      <div class="faq-body">Yes. Select IIT JEE as your level and choose from calculus, coordinate geometry, complex numbers, probability, and more. The AI generates JEE-style problems at the right difficulty with complete step-by-step solutions.</div>
+    </details>
+
+    <details>
+      <summary>Is it useful for SAT Math preparation?</summary>
+      <div class="faq-body">Absolutely. Select SAT as your exam level to get algebra, advanced math, problem-solving, and data analysis questions in the SAT format, complete with worked solutions.</div>
+    </details>
+
+    <details>
+      <summary>Does it support CBSE and ICSE?</summary>
+      <div class="faq-body">Yes. Problems follow the CBSE and ICSE curriculum for each class from Class 1 to Class 12, including NCERT-aligned practice questions.</div>
+    </details>
+
+    <details>
+      <summary>Does it support GCSE and A-Level maths?</summary>
+      <div class="faq-body">Yes. UK students can select GCSE or A-Level to practise topics aligned with AQA, Edexcel, and OCR specifications, including pure maths, mechanics, and statistics.</div>
+    </details>
+
+    <details>
+      <summary>Can I practice Math Olympiad problems?</summary>
+      <div class="faq-body">Yes. Choose Olympiad difficulty to get competition-style problems covering number theory, combinatorics, geometry proofs, and inequalities — suitable for IMO, AMC, AIME, RMO, INMO, and similar contests.</div>
+    </details>
+
+    <details>
+      <summary>Can I upload a photo of a math problem?</summary>
+      <div class="faq-body">Yes. Use the "Ask a Doubt" tab to upload a photo (JPG or PNG) or a PDF of any math problem. The AI reads the image and provides a full step-by-step explanation instantly.</div>
+    </details>
+
+    <details>
+      <summary>Can primary school children use this?</summary>
+      <div class="faq-body">Yes. Grade 1 through Grade 5 support includes age-appropriate problems on counting, addition, subtraction, multiplication, division, fractions, and basic geometry — all with clear child-friendly explanations.</div>
+    </details>
+
+    <details>
+      <summary>What AI powers Maths Daily Helper?</summary>
+      <div class="faq-body">All problems and solutions are generated by Claude AI, built by Anthropic. Claude is known for strong mathematical reasoning and clear, structured explanations.</div>
+    </details>
+
+  </div>
+</section>
+
+<!-- CTA -->
+<section>
+  <div class="cta-banner">
+    <h2>Ready to get better at maths?</h2>
+    <p>Free. No sign-up. Works on any device. Start practising in seconds.</p>
+    <a href="https://app.mathsdailyhelper.com" class="btn-primary">Open Maths Daily Helper →</a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <p>
+    &copy; 2026 Maths Daily Helper &nbsp;·&nbsp;
+    Built for students everywhere &nbsp;·&nbsp;
+    Powered by <a href="https://www.anthropic.com" rel="noopener">Claude AI</a>
+  </p>
+</footer>
+
+</body>
+</html>
