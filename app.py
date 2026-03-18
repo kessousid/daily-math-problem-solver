@@ -169,17 +169,21 @@ header[data-testid="stHeader"] { background: transparent !important; }
 
 /* ── Sidebar collapse button: hide ligature text, show unicode arrow ── */
 [data-testid="collapsedControl"] span,
-[data-testid="stSidebarCollapseButton"] span,
-[data-testid="baseButton-headerNoPadding"] span {
+[data-testid="stSidebarCollapseButton"] span {
     font-size: 0 !important;
     color: transparent !important;
 }
 [data-testid="collapsedControl"] span::before,
-[data-testid="stSidebarCollapseButton"] span::before,
-[data-testid="baseButton-headerNoPadding"] span::before {
+[data-testid="stSidebarCollapseButton"] span::before {
     content: "◀";
     font-size: 18px !important;
     color: rgba(139, 92, 246, 0.8) !important;
+}
+/* ── Ensure sidebar button text is always visible ── */
+section[data-testid="stSidebar"] .stButton > button p,
+section[data-testid="stSidebar"] .stButton > button span {
+    font-size: inherit !important;
+    color: inherit !important;
 }
 
 /* ── Tabs ── */
