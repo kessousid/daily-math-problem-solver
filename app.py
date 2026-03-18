@@ -46,12 +46,12 @@ st.markdown("""
 <meta name="keywords" content="maths practice, daily maths problems, IIT JEE maths, math olympiad, grade 1 to 12 maths, CBSE maths, ICSE maths, maths helper, AI maths tutor, free maths practice, step by step maths solutions, maths daily helper">
 <meta name="author" content="Maths Daily Helper">
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="https://www.mathsdailyhelper.com/">
+<link rel="canonical" href="https://app.mathsdailyhelper.com/">
 <link rel="sitemap" type="application/xml" href="/app/static/sitemap.xml">
 
 <!-- SEO: Open Graph (WhatsApp, Facebook previews) -->
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://www.mathsdailyhelper.com/">
+<meta property="og:url" content="https://app.mathsdailyhelper.com/">
 <meta property="og:title" content="Maths Daily Helper – AI Maths Practice for Grade 1–12, IIT JEE & Olympiad">
 <meta property="og:description" content="Free AI-powered daily maths practice. Problems, hints & step-by-step solutions for every grade — from Grade 1 to IIT JEE.">
 <meta property="og:image" content="https://www.mathsdailyhelper.com/app/static/icon-512.png">
@@ -69,7 +69,7 @@ st.markdown("""
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "Maths Daily Helper",
-    "url": "https://www.mathsdailyhelper.com",
+    "url": "https://app.mathsdailyhelper.com",
     "description": "Free AI-powered maths practice for Grade 1 to Grade 12, IIT JEE, BITSAT, Math Olympiad, SAT, AMC and more. Daily problems, hints and step-by-step solutions.",
     "applicationCategory": "EducationApplication",
     "operatingSystem": "All",
@@ -91,7 +91,7 @@ st.markdown("""
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "Maths Daily Helper",
-    "url": "https://www.mathsdailyhelper.com",
+    "url": "https://app.mathsdailyhelper.com",
     "logo": "https://www.mathsdailyhelper.com/app/static/icon-512.png",
     "sameAs": [
       "https://github.com/kessousid/daily-math-problem-solver"
