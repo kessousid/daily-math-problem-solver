@@ -975,22 +975,25 @@ Problem: {problem}
 
 
 def build_verify_prompt(problem, user_answer):
-    return f"""You are a strict but fair maths examiner.
+    return f"""You are a strict maths examiner. Follow these steps exactly.
 
+STEP 1 — Solve the problem yourself independently. Do NOT look at the student's answer yet.
 Problem: {problem}
+Compute the correct answer carefully, showing each step.
 
-Student's answer: {user_answer}
+STEP 2 — Write the correct answer clearly: "Correct answer: ..."
 
-Determine if the student's answer is correct. Accept equivalent forms as correct
-(e.g. 2/4 = 1/2, x=3 and x = 3, 0.5 and 1/2, simplified and unsimplified equivalent values).
+STEP 3 — Now compare with the student's answer: {user_answer}
+Is it numerically/mathematically equivalent to your answer in Step 2?
+Accept equivalent forms (2/4 = 1/2, x=3 or x = 3, 0.5 and 1/2) but reject any wrong value.
 
-Respond in EXACTLY this format — first line must be one of these two:
+STEP 4 — Write your feedback: 1–2 sentences. Use LaTeX for all math.
+If correct: confirm and name the key concept.
+If incorrect: give a small nudge without revealing the answer.
+
+STEP 5 — Final verdict. The VERY LAST LINE of your response must be exactly one of:
 RESULT: CORRECT
-RESULT: INCORRECT
-
-Then on a new line, write 1–2 sentences of feedback using LaTeX for any math.
-If correct: confirm briefly and name the key concept.
-If incorrect: give a small nudge without revealing the full solution."""
+RESULT: INCORRECT"""
 
 
 def build_paper_prompt(grade, board, year, topics_note, jee_type=None):
@@ -1522,21 +1525,31 @@ if st.session_state.active_tab == 0:
             with st.spinner("Checking your answer…"):
                 ph = st.empty()
                 verdict = stream_response(client,
-                    build_verify_prompt(data["problem"], user_answer.strip()), ph, max_tokens=300)
+                    build_verify_prompt(data["problem"], user_answer.strip()), ph, max_tokens=600)
             st.session_state.answer_feedback = verdict
-            if verdict.strip().startswith("RESULT: CORRECT"):
-                st.session_state.answer_result = "correct"
-                if not st.session_state.show_solution:  # only count once
-                    handle_correct_answer()
-                    st.balloons()
-            else:
-                st.session_state.answer_result = "incorrect"
+            # Find RESULT line anywhere in the response (Claude may reason before concluding)
+            _result = "incorrect"
+            for _line in verdict.strip().split("\n"):
+                _l = _line.strip()
+                if _l == "RESULT: CORRECT":
+                    _result = "correct"
+                    break
+                elif _l == "RESULT: INCORRECT":
+                    _result = "incorrect"
+                    break
+            st.session_state.answer_result = _result
+            if _result == "correct" and not st.session_state.show_solution:
+                handle_correct_answer()
+                st.balloons()
             st.rerun()
 
         if st.session_state.answer_feedback:
-            # strip the RESULT line before showing feedback
-            fb_lines = st.session_state.answer_feedback.split("\n", 1)
-            fb_body  = fb_lines[1].strip() if len(fb_lines) > 1 else ""
+            # Show feedback: remove RESULT line and Step headers, keep explanation only
+            fb_lines = [l for l in st.session_state.answer_feedback.split("\n")
+                        if not l.strip().startswith("RESULT:")
+                        and not l.strip().startswith("STEP ")
+                        and not l.strip().startswith("Correct answer:")]
+            fb_body = "\n".join(fb_lines).strip()
             if fb_body:
                 box_t = "success" if st.session_state.answer_result == "correct" else "warning"
                 render_math_box(fb_body, box_t)
