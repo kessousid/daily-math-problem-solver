@@ -1738,9 +1738,6 @@ elif st.session_state.active_tab == 1:
             <h3 style="margin:0;color:white;">📄 {board_label}{meta.get('grade','')}{jee_label}</h3>
             <p style="margin:.3rem 0 0;opacity:.75;font-size:.9rem;">{year_label}AI-Generated Practice Paper</p>
         </div>""", unsafe_allow_html=True)
-        render_math_markdown(st.session_state.paper_text)
-        st.divider()
-
         # ── Answer Entry ──────────────────────────────────────────────────────
         q_count = detect_question_count(st.session_state.paper_text)
 
@@ -1811,6 +1808,8 @@ elif st.session_state.active_tab == 1:
                         unsafe_allow_html=True)
             render_math_markdown(st.session_state.paper_score)
 
+        st.divider()
+        render_math_markdown(st.session_state.paper_text)
         st.divider()
         cs1, cs2 = st.columns(2)
         with cs1:
