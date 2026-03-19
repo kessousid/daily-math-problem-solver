@@ -1510,14 +1510,15 @@ if st.session_state.active_tab == 0:
 
         cb1, cb2 = st.columns([1, 2])
         with cb1:
-            check_btn = st.button("✅ Check Answer", type="primary", use_container_width=True,
-                                  disabled=not user_answer.strip())
+            check_btn = st.button("✅ Check Answer", type="primary", use_container_width=True)
         with cb2:
             if st.session_state.answer_result == "correct":
                 st.success("🎉 Correct! Well done.")
             elif st.session_state.answer_result == "incorrect":
                 st.error("❌ Not quite — try again or use a hint.")
 
+        if check_btn and not user_answer.strip():
+            st.warning("Please enter your answer first.", icon="✏️")
         if check_btn and user_answer.strip():
             st.session_state.answer_result   = None
             st.session_state.answer_feedback = ""
