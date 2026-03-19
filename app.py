@@ -1428,6 +1428,9 @@ with st.sidebar:
             st.markdown(f"<div style='color:#a78bfa;font-size:0.85rem;margin-bottom:0.4rem;'>👤 {_sb_user['email']}</div>", unsafe_allow_html=True)
             if st.button("Sign Out", use_container_width=True):
                 st.session_state.supabase_user = None
+                st.session_state.problem_count = 0
+                st.session_state.streak = 0
+                st.session_state.last_solved_date = None
                 st.session_state.pop("sb_client", None)
                 st.rerun()
         else:
