@@ -855,10 +855,14 @@ def get_supabase():
     key = os.environ.get("SUPABASE_ANON_KEY", "")
     if not url or not key:
         return None
-    try:
-        return create_client(url, key)
-    except Exception:
-        return None
+    # Reuse the same client instance within a browser session so the
+    # auth session (set after sign_in_with_password) is preserved across reruns.
+    if "sb_client" not in st.session_state:
+        try:
+            st.session_state.sb_client = create_client(url, key)
+        except Exception:
+            return None
+    return st.session_state.sb_client
 
 def sb_load_stats(user_id):
     sb = get_supabase()
@@ -1424,6 +1428,7 @@ with st.sidebar:
             st.markdown(f"<div style='color:#a78bfa;font-size:0.85rem;margin-bottom:0.4rem;'>👤 {_sb_user['email']}</div>", unsafe_allow_html=True)
             if st.button("Sign Out", use_container_width=True):
                 st.session_state.supabase_user = None
+                st.session_state.pop("sb_client", None)
                 st.rerun()
         else:
             if get_supabase():
