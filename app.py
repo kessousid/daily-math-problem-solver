@@ -1054,25 +1054,6 @@ def detect_question_count(paper_text):
     return 20  # fallback
 
 
-_PROOF_PATTERNS = re.compile(
-    r'\b(prove|show that|derive|establish|demonstrate|verify that|justify|hence show|'
-    r'hence prove|using induction|by induction|find and prove|prove by)\b',
-    re.IGNORECASE
-)
-
-def detect_proof_questions(paper_text):
-    """Return a set of question numbers that are subjective/proof-type."""
-    import re
-    proof_qs = set()
-    # Split on question boundaries like Q1, Q2, 1., 2. etc.
-    segments = re.split(r'(?=(?:Q\.?\s*\d+|\n\s*\(?\d+[.)]\s))', paper_text)
-    for seg in segments:
-        q_match = re.match(r'Q\.?\s*(\d+)|\n?\s*\(?(\d+)[.)]\s', seg, re.IGNORECASE)
-        if q_match:
-            q_num = int(q_match.group(1) or q_match.group(2))
-            if _PROOF_PATTERNS.search(seg):
-                proof_qs.add(q_num)
-    return proof_qs
 
 
 def build_paper_grading_prompt(paper_text, answers_dict, grade, board):
@@ -1106,7 +1087,9 @@ Correct answer: [answer]
 Student gave: [their answer]
 Feedback: [one sentence explaining the error]
 
-For unanswered questions:
+For unanswered questions: first check if the question is a proof/derivation/subjective question (keywords: prove, show that, derive, demonstrate, establish). If yes:
+**Q[n]** — 📝 Proof/subjective — not auto-graded
+If it is a regular question left blank:
 **Q[n]** — ⬜ Not attempted — 0/1
 
 After ALL questions add:
@@ -1763,57 +1746,52 @@ elif st.session_state.active_tab == 1:
         st.divider()
 
         # ── Answer Entry ──────────────────────────────────────────────────────
-        q_count   = detect_question_count(st.session_state.paper_text)
-        proof_qs  = detect_proof_questions(st.session_state.paper_text)
-        gradable  = [i for i in range(1, q_count + 1) if i not in proof_qs]
+        q_count = detect_question_count(st.session_state.paper_text)
 
-        with st.expander(f"✏️ Enter Your Answers ({len(gradable)} gradable, {len(proof_qs)} proof/subjective)", expanded=False):
-            if proof_qs:
-                st.info(f"📝 Q{', Q'.join(str(q) for q in sorted(proof_qs))} are proof/subjective questions — skipped from grading.", icon="ℹ️")
+        with st.expander(f"✏️ Enter Your Answers ({q_count} questions detected)", expanded=False):
+            st.caption("For proof/subjective questions, leave the box blank — they will be noted as not auto-gradable.")
+            # Math keyboard
+            st.markdown("<div style='font-size:0.78rem;color:rgba(226,232,240,0.45);margin-bottom:0.4rem;'>Math keyboard — select target question, then click symbol to insert</div>", unsafe_allow_html=True)
+            _kb_target = st.selectbox("Insert symbol into:", [f"Q{i}" for i in range(1, q_count + 1)],
+                                      key="paper_kb_target", label_visibility="collapsed")
+            _kb_q_num  = int(_kb_target[1:])
+            _kb_key    = f"paper_ans_{_kb_q_num}"
+            KB_ROWS = [
+                ["π", "∞", "√", "∛", "²", "³", "±", "×", "÷", "≠"],
+                ["≤", "≥", "≈", "∈", "∉", "⊂", "∪", "∩", "Σ", "∫"],
+                ["α", "β", "γ", "θ", "λ", "σ", "Δ", "∂", "∝", "∴"],
+            ]
+            for row in KB_ROWS:
+                _kcols = st.columns(len(row))
+                for _ki, _sym in enumerate(row):
+                    if _kcols[_ki].button(_sym, key=f"pkb_{_sym}", use_container_width=True):
+                        st.session_state[_kb_key] = st.session_state.get(_kb_key, "") + _sym
 
-            # Math keyboard — only for gradable questions
-            if gradable:
-                st.markdown("<div style='font-size:0.78rem;color:rgba(226,232,240,0.45);margin-bottom:0.4rem;'>Math keyboard — select target question, then click symbol to insert</div>", unsafe_allow_html=True)
-                _kb_target = st.selectbox("Insert symbol into:", [f"Q{i}" for i in gradable],
-                                          key="paper_kb_target", label_visibility="collapsed")
-                _kb_q_num  = int(_kb_target[1:])
-                _kb_key    = f"paper_ans_{_kb_q_num}"
-                KB_ROWS = [
-                    ["π", "∞", "√", "∛", "²", "³", "±", "×", "÷", "≠"],
-                    ["≤", "≥", "≈", "∈", "∉", "⊂", "∪", "∩", "Σ", "∫"],
-                    ["α", "β", "γ", "θ", "λ", "σ", "Δ", "∂", "∝", "∴"],
-                ]
-                for row in KB_ROWS:
-                    _kcols = st.columns(len(row))
-                    for _ki, _sym in enumerate(row):
-                        if _kcols[_ki].button(_sym, key=f"pkb_{_sym}", use_container_width=True):
-                            st.session_state[_kb_key] = st.session_state.get(_kb_key, "") + _sym
+            st.markdown("---")
 
-                st.markdown("---")
-
-                # Answer inputs — 3 per row, only gradable questions
-                for _row_start in range(0, len(gradable), 3):
-                    _cols = st.columns(3)
-                    for _ci, _qi in enumerate(gradable[_row_start:_row_start + 3]):
-                        with _cols[_ci]:
-                            st.text_input(f"Q{_qi}", key=f"paper_ans_{_qi}",
-                                          placeholder=f"Answer for Q{_qi}")
+            # Numbered answer inputs — 3 per row
+            for _row_start in range(1, q_count + 1, 3):
+                _cols = st.columns(3)
+                for _ci, _qi in enumerate(range(_row_start, min(_row_start + 3, q_count + 1))):
+                    with _cols[_ci]:
+                        st.text_input(f"Q{_qi}", key=f"paper_ans_{_qi}",
+                                      placeholder=f"Answer for Q{_qi}")
 
             st.markdown("---")
             _submit_col, _clear_col = st.columns([2, 1])
             with _submit_col:
                 submit_answers_btn = st.button("📊 Submit All & Get Score", type="primary",
-                                               use_container_width=True, disabled=not gradable)
+                                               use_container_width=True)
             with _clear_col:
                 if st.button("🗑️ Clear Answers", use_container_width=True):
-                    for _qi in gradable:
+                    for _qi in range(1, q_count + 1):
                         st.session_state[f"paper_ans_{_qi}"] = ""
                     st.session_state.paper_score = None
                     st.rerun()
 
             if submit_answers_btn:
                 _answers = {_qi: st.session_state.get(f"paper_ans_{_qi}", "")
-                            for _qi in gradable}
+                            for _qi in range(1, q_count + 1)}
                 _filled  = sum(1 for v in _answers.values() if v.strip())
                 if _filled == 0:
                     st.warning("Please enter at least one answer before submitting.", icon="✏️")
