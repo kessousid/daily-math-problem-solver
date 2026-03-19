@@ -7,6 +7,13 @@ import io
 import os
 import requests as _requests
 import streamlit.components.v1 as components
+from datetime import date as _date
+
+try:
+    from supabase import create_client
+    SUPABASE_OK = True
+except ImportError:
+    SUPABASE_OK = False
 
 try:
     import pdfplumber
@@ -839,6 +846,89 @@ def get_client():
     return anthropic.Anthropic(api_key=api_key.strip())
 
 # ═════════════════════════════════════════════════════════════════════════════
+# SUPABASE — optional, gracefully degrades if not configured
+# ═════════════════════════════════════════════════════════════════════════════
+@st.cache_resource
+def get_supabase():
+    if not SUPABASE_OK:
+        return None
+    url = st.secrets.get("SUPABASE_URL", "") or os.environ.get("SUPABASE_URL", "")
+    key = st.secrets.get("SUPABASE_ANON_KEY", "") or os.environ.get("SUPABASE_ANON_KEY", "")
+    if url and key:
+        return create_client(url, key)
+    return None
+
+def sb_load_stats(user_id):
+    sb = get_supabase()
+    if not sb or not user_id:
+        return None
+    try:
+        r = sb.table("user_stats").select("*").eq("id", user_id).single().execute()
+        return r.data
+    except Exception:
+        return None
+
+def sb_save_stats(user_id, problems_solved, streak, last_solved_date):
+    sb = get_supabase()
+    if not sb or not user_id:
+        return
+    try:
+        sb.table("user_stats").upsert({
+            "id": user_id,
+            "problems_solved": problems_solved,
+            "streak": streak,
+            "last_solved_date": str(last_solved_date) if last_solved_date else None,
+        }).execute()
+    except Exception:
+        pass
+
+def sb_sign_up(email, password):
+    sb = get_supabase()
+    if not sb:
+        return None, "Supabase not configured"
+    try:
+        r = sb.auth.sign_up({"email": email, "password": password})
+        if r.user:
+            return r.user, None
+        return None, "Sign-up failed"
+    except Exception as e:
+        return None, str(e)
+
+def sb_sign_in(email, password):
+    sb = get_supabase()
+    if not sb:
+        return None, "Supabase not configured"
+    try:
+        r = sb.auth.sign_in_with_password({"email": email, "password": password})
+        if r.user:
+            return r.user, None
+        return None, "Invalid email or password"
+    except Exception as e:
+        return None, str(e)
+
+def handle_correct_answer():
+    """Increment solved count and update streak, then sync to Supabase."""
+    today = _date.today()
+    last  = st.session_state.last_solved_date
+
+    if last == today:
+        pass  # already counted today
+    elif last and (today - last).days == 1:
+        st.session_state.streak += 1
+    else:
+        st.session_state.streak = 1
+
+    st.session_state.last_solved_date = today
+    st.session_state.problem_count   += 1
+
+    user = st.session_state.get("supabase_user")
+    if user:
+        sb_save_stats(user["id"],
+                      st.session_state.problem_count,
+                      st.session_state.streak,
+                      today)
+
+# ═════════════════════════════════════════════════════════════════════════════
 # PROMPTS
 # ═════════════════════════════════════════════════════════════════════════════
 def build_problem_prompt(grade, difficulty, topic, subtopic):
@@ -879,6 +969,25 @@ Problem: {problem}
 **Step-by-Step Solution:** <numbered steps, every symbol in LaTeX, explain the WHY>
 **Key Concept:** <1–2 sentences>
 **Common Mistakes:** <1–2 wrong-vs-correct examples in LaTeX>"""
+
+
+def build_verify_prompt(problem, user_answer):
+    return f"""You are a strict but fair maths examiner.
+
+Problem: {problem}
+
+Student's answer: {user_answer}
+
+Determine if the student's answer is correct. Accept equivalent forms as correct
+(e.g. 2/4 = 1/2, x=3 and x = 3, 0.5 and 1/2, simplified and unsimplified equivalent values).
+
+Respond in EXACTLY this format — first line must be one of these two:
+RESULT: CORRECT
+RESULT: INCORRECT
+
+Then on a new line, write 1–2 sentences of feedback using LaTeX for any math.
+If correct: confirm briefly and name the key concept.
+If incorrect: give a small nudge without revealing the full solution."""
 
 
 def build_paper_prompt(grade, board, year, topics_note, jee_type=None):
@@ -1130,9 +1239,24 @@ for k, v in {
     "show_hint": False, "show_solution": False, "problem_count": 0,
     "paper_text": None, "paper_solutions": None, "show_paper_solutions": False, "paper_meta": None,
     "doubt_response": None, "active_tab": 0,
+    # answer verification
+    "answer_result": None, "answer_feedback": "",
+    # streak
+    "streak": 0, "last_solved_date": None,
+    # optional user profile
+    "supabase_user": None,
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
+
+# On load: if user signed in last session, restore stats from Supabase
+if st.session_state.supabase_user and st.session_state.problem_count == 0:
+    _stats = sb_load_stats(st.session_state.supabase_user["id"])
+    if _stats:
+        st.session_state.problem_count    = _stats.get("problems_solved", 0)
+        st.session_state.streak           = _stats.get("streak", 0)
+        _ld = _stats.get("last_solved_date")
+        st.session_state.last_solved_date = _date.fromisoformat(_ld) if _ld else None
 
 # ═════════════════════════════════════════════════════════════════════════════
 # HEADER
@@ -1212,17 +1336,22 @@ with st.sidebar:
         elif n < 30:  rank, rank_emoji = "Big Brain", "🧠"
         else:          rank, rank_emoji = "Legend",   "👑"
 
+        _streak = st.session_state.streak
+        _streak_display = f"🔥{_streak}" if _streak > 0 else "—"
+        _user   = st.session_state.get("supabase_user")
+        _user_label = f"<div style='font-size:0.75rem;color:#a78bfa;margin-top:0.3rem;'>👤 {_user['email']}</div>" if _user else ""
         st.markdown(f"""
 <div style="text-align:center;padding:1rem 0 0.5rem;">
     <div style="font-size:2rem;">{rank_emoji}</div>
     <div class="rank-pill">{rank}</div>
+    {_user_label}
     <div style="margin-top:0.8rem;display:flex;gap:8px;justify-content:center;">
         <div class="stat-card" style="flex:1;">
             <div class="stat-number">{n}</div>
             <div class="stat-label">solved</div>
         </div>
         <div class="stat-card" style="flex:1;">
-            <div class="stat-number">{'🔥' if n > 0 else '—'}</div>
+            <div class="stat-number">{_streak_display}</div>
             <div class="stat-label">streak</div>
         </div>
     </div>
@@ -1243,6 +1372,48 @@ with st.sidebar:
         st.divider()
         st.markdown("<div style='color:rgba(226,232,240,0.4);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;'>Pro Tips</div>", unsafe_allow_html=True)
         st.markdown("<div style='color:rgba(226,232,240,0.55);font-size:0.82rem;line-height:1.7;'>🎯 Always try before hitting hint<br>🧠 Understand the <em>why</em>, not just the answer<br>📈 Level up difficulty once you're comfortable</div>", unsafe_allow_html=True)
+
+        # ── Optional user profile ─────────────────────────────────────────────
+        st.divider()
+        _sb_user = st.session_state.get("supabase_user")
+        if _sb_user:
+            st.markdown("<div style='color:rgba(226,232,240,0.4);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;'>👤 Profile</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='color:#a78bfa;font-size:0.85rem;margin-bottom:0.5rem;'>{_sb_user['email']}</div>", unsafe_allow_html=True)
+            if st.button("Sign Out", use_container_width=True):
+                st.session_state.supabase_user = None
+                st.rerun()
+        else:
+            if get_supabase():
+                with st.expander("👤 Sign In / Create Account  *(optional — saves your streak)*", expanded=False):
+                    _auth_tab = st.radio("", ["Sign In", "Create Account"], horizontal=True, key="auth_mode", label_visibility="collapsed")
+                    _email    = st.text_input("Email", key="auth_email")
+                    _pw       = st.text_input("Password", type="password", key="auth_pw")
+                    if _auth_tab == "Sign In":
+                        if st.button("Sign In", use_container_width=True, key="btn_signin"):
+                            if _email and _pw:
+                                _u, _err = sb_sign_in(_email, _pw)
+                                if _u:
+                                    st.session_state.supabase_user = {"id": _u.id, "email": _u.email}
+                                    _stats = sb_load_stats(_u.id)
+                                    if _stats:
+                                        st.session_state.problem_count    = _stats.get("problems_solved", 0)
+                                        st.session_state.streak           = _stats.get("streak", 0)
+                                        _ld = _stats.get("last_solved_date")
+                                        st.session_state.last_solved_date = _date.fromisoformat(_ld) if _ld else None
+                                    st.success("Signed in!")
+                                    st.rerun()
+                                else:
+                                    st.error(_err)
+                    else:
+                        if st.button("Create Account", use_container_width=True, key="btn_signup"):
+                            if _email and _pw:
+                                _u, _err = sb_sign_up(_email, _pw)
+                                if _u:
+                                    st.session_state.supabase_user = {"id": _u.id, "email": _u.email}
+                                    st.success("Account created! Your progress will now be saved.")
+                                    st.rerun()
+                                else:
+                                    st.error(_err)
 
         st.divider()
         st.markdown("<div style='color:rgba(226,232,240,0.4);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;'>📬 Contact Us</div>", unsafe_allow_html=True)
@@ -1311,6 +1482,70 @@ if st.session_state.active_tab == 0:
         st.markdown('<p class="section-label label-problem">📝 Problem</p>', unsafe_allow_html=True)
         render_math_box(data["problem"], "info")
 
+        # ── Answer input + Math keyboard ──────────────────────────────────────
+        st.markdown('<p class="section-label label-hint">✏️ Your Answer</p>', unsafe_allow_html=True)
+
+        # Math symbol keyboard
+        with st.expander("🔢 Math Keyboard — click to insert symbols", expanded=False):
+            st.markdown("<div style='font-size:0.78rem;color:rgba(226,232,240,0.45);margin-bottom:0.5rem;'>Click any symbol to append it to your answer</div>", unsafe_allow_html=True)
+            KB_ROWS = [
+                ["π", "∞", "√", "∛", "²", "³", "±", "×", "÷", "≠"],
+                ["≤", "≥", "≈", "∈", "∉", "⊂", "∪", "∩", "Σ", "∫"],
+                ["α", "β", "γ", "θ", "λ", "σ", "Δ", "∂", "∝", "∴"],
+                ["(", ")", "[", "]", "{", "}", "^", "_", "/", "|"],
+            ]
+            for row in KB_ROWS:
+                cols = st.columns(len(row))
+                for i, sym in enumerate(row):
+                    if cols[i].button(sym, key=f"kb_{sym}", use_container_width=True):
+                        current = st.session_state.get("answer_input", "")
+                        st.session_state["answer_input"] = current + sym
+
+        user_answer = st.text_input(
+            "Type your answer here:",
+            key="answer_input",
+            placeholder="e.g.  x = 3,  √5,  π/2,  12.5 …",
+        )
+
+        cb1, cb2 = st.columns([1, 2])
+        with cb1:
+            check_btn = st.button("✅ Check Answer", type="primary", use_container_width=True,
+                                  disabled=not user_answer.strip())
+        with cb2:
+            if st.session_state.answer_result == "correct":
+                st.success("🎉 Correct! Well done.")
+            elif st.session_state.answer_result == "incorrect":
+                st.error("❌ Not quite — try again or use a hint.")
+
+        if check_btn and user_answer.strip():
+            st.session_state.answer_result   = None
+            st.session_state.answer_feedback = ""
+            client = get_client()
+            with st.spinner("Checking your answer…"):
+                ph = st.empty()
+                verdict = stream_response(client,
+                    build_verify_prompt(data["problem"], user_answer.strip()), ph, max_tokens=300)
+            st.session_state.answer_feedback = verdict
+            if verdict.strip().startswith("RESULT: CORRECT"):
+                st.session_state.answer_result = "correct"
+                if not st.session_state.show_solution:  # only count once
+                    handle_correct_answer()
+                    st.balloons()
+            else:
+                st.session_state.answer_result = "incorrect"
+            st.rerun()
+
+        if st.session_state.answer_feedback:
+            # strip the RESULT line before showing feedback
+            fb_lines = st.session_state.answer_feedback.split("\n", 1)
+            fb_body  = fb_lines[1].strip() if len(fb_lines) > 1 else ""
+            if fb_body:
+                box_t = "success" if st.session_state.answer_result == "correct" else "warning"
+                render_math_box(fb_body, box_t)
+
+        st.divider()
+
+        # ── Hint / Solution / Next buttons ────────────────────────────────────
         c1, c2, c3 = st.columns(3)
         with c1:
             if st.button("💡 Give Me a Nudge", use_container_width=True):
@@ -1324,11 +1559,16 @@ if st.session_state.active_tab == 0:
                     sol = stream_response(client, build_solution_prompt(
                         data["grade"], data["difficulty"], data["topic"], data["subtopic"], data["problem"]), ph)
                     st.session_state.solution = sol
-                    st.session_state.problem_count += 1
+                    # only increment if not already counted via answer check
+                    if st.session_state.answer_result != "correct":
+                        handle_correct_answer()
                     st.balloons()
         with c3:
             if st.button("🔄 Next One", use_container_width=True):
-                st.session_state.update(show_hint=False, show_solution=False, solution=None)
+                st.session_state.update(
+                    show_hint=False, show_solution=False, solution=None,
+                    answer_result=None, answer_feedback="", answer_input="",
+                )
                 client = get_client()
                 ph = st.empty()
                 raw = stream_response(client, build_problem_prompt(
