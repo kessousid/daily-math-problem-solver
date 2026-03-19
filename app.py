@@ -1044,14 +1044,14 @@ Do NOT include answers. Use LaTeX for all math. Output clean markdown."""
 
 def detect_question_count(paper_text):
     """Scan paper text to find the highest question number."""
-    import re
-    matches = re.findall(r'\bQ\.?\s*(\d+)\b', paper_text, re.IGNORECASE)
-    if matches:
-        return min(max(int(m) for m in matches), 40)
-    matches = re.findall(r'^\s*\(?(\d+)[.)]\s', paper_text, re.MULTILINE)
-    if matches:
-        return min(max(int(m) for m in matches), 40)
-    return 20  # fallback
+    all_nums = []
+    # Q1, Q.1, Question 1, Question: 1
+    all_nums += re.findall(r'\b(?:Q\.?\s*|Question\s*)(\d+)\b', paper_text, re.IGNORECASE)
+    # Lines starting with a number: "1.", "1)", "(1)", "**1.**", "**1)"
+    all_nums += re.findall(r'^\s*\*{0,2}\(?\s*(\d+)\s*[.)]\*{0,2}', paper_text, re.MULTILINE)
+    if all_nums:
+        return min(max(int(m) for m in all_nums), 60)
+    return 30  # fallback
 
 
 
