@@ -1042,6 +1042,47 @@ Topics: {topics_note}
 Do NOT include answers. Use LaTeX for all math. Output clean markdown."""
 
 
+def detect_question_count(paper_text):
+    """Scan paper text to find the highest question number."""
+    import re
+    matches = re.findall(r'\bQ\.?\s*(\d+)\b', paper_text, re.IGNORECASE)
+    if matches:
+        return min(max(int(m) for m in matches), 40)
+    matches = re.findall(r'^\s*\(?(\d+)[.)]\s', paper_text, re.MULTILINE)
+    if matches:
+        return min(max(int(m) for m in matches), 40)
+    return 20  # fallback
+
+
+def build_paper_grading_prompt(paper_text, answers_dict, grade, board):
+    exam_ref = f"{board} {grade}" if board else grade
+    answers_formatted = "\n".join(
+        f"Q{q}: {a.strip()}" for q, a in sorted(answers_dict.items()) if a.strip()
+    ) or "No answers provided."
+    return f"""You are a strict {exam_ref} examiner. Grade the student's answers against the paper below.
+
+EXAM PAPER:
+{paper_text}
+
+STUDENT ANSWERS:
+{answers_formatted}
+
+For every question that has a student answer, output:
+**Q[n]** — [marks awarded]/[total marks available]
+Correct answer: [correct answer in LaTeX]
+Student answer: [their answer]
+[One line of feedback — confirm if right, or give a brief hint if wrong]
+
+For unanswered questions write: **Q[n]** — 0/[marks] — Not attempted
+
+End with a divider line and summary:
+---
+**TOTAL SCORE: [X] / [Y] ([Z]%)**
+[2–3 sentences of overall feedback on the student's performance]
+
+Use LaTeX for all mathematical expressions."""
+
+
 def build_paper_solutions_prompt(paper_text, grade, board):
     exam_ref = f"{board} {grade}" if board else grade
     return f"""Provide COMPLETE solutions and marking scheme for every question in this {exam_ref} paper.
@@ -1251,6 +1292,8 @@ for k, v in {
     "streak": 0, "last_solved_date": None,
     # optional user profile
     "supabase_user": None,
+    # full paper answers
+    "paper_score": None,
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -1684,6 +1727,78 @@ elif st.session_state.active_tab == 1:
         </div>""", unsafe_allow_html=True)
         render_math_markdown(st.session_state.paper_text)
         st.divider()
+
+        # ── Answer Entry ──────────────────────────────────────────────────────
+        q_count = detect_question_count(st.session_state.paper_text)
+
+        with st.expander(f"✏️ Enter Your Answers ({q_count} questions detected)", expanded=False):
+            # Math keyboard
+            st.markdown("<div style='font-size:0.78rem;color:rgba(226,232,240,0.45);margin-bottom:0.4rem;'>Math keyboard — select target question, then click symbol to insert</div>", unsafe_allow_html=True)
+            _kb_target = st.selectbox("Insert symbol into:", [f"Q{i}" for i in range(1, q_count + 1)],
+                                      key="paper_kb_target", label_visibility="collapsed")
+            _kb_q_num  = int(_kb_target[1:])
+            _kb_key    = f"paper_ans_{_kb_q_num}"
+            KB_ROWS = [
+                ["π", "∞", "√", "∛", "²", "³", "±", "×", "÷", "≠"],
+                ["≤", "≥", "≈", "∈", "∉", "⊂", "∪", "∩", "Σ", "∫"],
+                ["α", "β", "γ", "θ", "λ", "σ", "Δ", "∂", "∝", "∴"],
+            ]
+            for row in KB_ROWS:
+                _kcols = st.columns(len(row))
+                for _ki, _sym in enumerate(row):
+                    if _kcols[_ki].button(_sym, key=f"pkb_{_sym}", use_container_width=True):
+                        st.session_state[_kb_key] = st.session_state.get(_kb_key, "") + _sym
+
+            st.markdown("---")
+
+            # Numbered answer inputs — 3 per row
+            for _row_start in range(1, q_count + 1, 3):
+                _cols = st.columns(3)
+                for _ci, _qi in enumerate(range(_row_start, min(_row_start + 3, q_count + 1))):
+                    with _cols[_ci]:
+                        st.text_input(f"Q{_qi}", key=f"paper_ans_{_qi}",
+                                      placeholder=f"Answer for Q{_qi}")
+
+            st.markdown("---")
+            _submit_col, _clear_col = st.columns([2, 1])
+            with _submit_col:
+                submit_answers_btn = st.button("📊 Submit All & Get Score", type="primary",
+                                               use_container_width=True)
+            with _clear_col:
+                if st.button("🗑️ Clear Answers", use_container_width=True):
+                    for _qi in range(1, q_count + 1):
+                        st.session_state[f"paper_ans_{_qi}"] = ""
+                    st.session_state.paper_score = None
+                    st.rerun()
+
+            if submit_answers_btn:
+                _answers = {_qi: st.session_state.get(f"paper_ans_{_qi}", "")
+                            for _qi in range(1, q_count + 1)}
+                _filled  = sum(1 for v in _answers.values() if v.strip())
+                if _filled == 0:
+                    st.warning("Please enter at least one answer before submitting.", icon="✏️")
+                else:
+                    st.session_state.paper_score = None
+                    client = get_client()
+                    st.info(f"⏳ Grading {_filled} answer(s)…", icon="🔄")
+                    ph = st.empty()
+                    score_text = stream_response(
+                        client,
+                        build_paper_grading_prompt(
+                            st.session_state.paper_text, _answers,
+                            meta.get("grade", ""), meta.get("board", "")
+                        ),
+                        ph, max_tokens=8192
+                    )
+                    st.session_state.paper_score = score_text
+                    st.rerun()
+
+        if st.session_state.paper_score:
+            st.markdown('<p class="section-label label-solution">📊 Your Score & Feedback</p>',
+                        unsafe_allow_html=True)
+            render_math_markdown(st.session_state.paper_score)
+
+        st.divider()
         cs1, cs2 = st.columns(2)
         with cs1:
             if st.button("✅ Generate Complete Solutions & Marking Scheme", type="primary", use_container_width=True):
@@ -1698,7 +1813,10 @@ elif st.session_state.active_tab == 1:
                     st.rerun()
         with cs2:
             if st.button("🔄 Generate New Paper", use_container_width=True):
-                st.session_state.update(paper_text=None, paper_solutions=None, show_paper_solutions=False)
+                st.session_state.update(paper_text=None, paper_solutions=None,
+                                        show_paper_solutions=False, paper_score=None)
+                for _qi in range(1, 41):
+                    st.session_state.pop(f"paper_ans_{_qi}", None)
                 st.rerun()
 
         if st.session_state.show_paper_solutions and st.session_state.paper_solutions:
