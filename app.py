@@ -1738,10 +1738,13 @@ elif st.session_state.active_tab == 1:
             <h3 style="margin:0;color:white;">📄 {board_label}{meta.get('grade','')}{jee_label}</h3>
             <p style="margin:.3rem 0 0;opacity:.75;font-size:.9rem;">{year_label}AI-Generated Practice Paper</p>
         </div>""", unsafe_allow_html=True)
+        render_math_markdown(st.session_state.paper_text)
+        st.divider()
+
         # ── Answer Entry ──────────────────────────────────────────────────────
         q_count = detect_question_count(st.session_state.paper_text)
 
-        with st.expander(f"✏️ Enter Your Answers ({q_count} questions detected)", expanded=True):
+        with st.expander(f"✏️ Enter Your Answers ({q_count} questions detected)", expanded=False):
             # Math keyboard
             st.markdown("<div style='font-size:0.78rem;color:rgba(226,232,240,0.45);margin-bottom:0.4rem;'>Math keyboard — select target question, then click symbol to insert</div>", unsafe_allow_html=True)
             _kb_target = st.selectbox("Insert symbol into:", [f"Q{i}" for i in range(1, q_count + 1)],
@@ -1808,8 +1811,6 @@ elif st.session_state.active_tab == 1:
                         unsafe_allow_html=True)
             render_math_markdown(st.session_state.paper_score)
 
-        st.divider()
-        render_math_markdown(st.session_state.paper_text)
         st.divider()
         cs1, cs2 = st.columns(2)
         with cs1:
