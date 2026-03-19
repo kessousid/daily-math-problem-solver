@@ -1059,7 +1059,12 @@ def build_paper_grading_prompt(paper_text, answers_dict, grade, board):
     answers_formatted = "\n".join(
         f"Q{q}: {a.strip()}" for q, a in sorted(answers_dict.items()) if a.strip()
     ) or "No answers provided."
-    return f"""You are a strict {exam_ref} examiner. Grade the student's answers.
+    return f"""You are a {exam_ref} examiner. Grade each student answer by following these steps for EVERY question:
+
+STEP 1 — Solve the question yourself to find the correct answer.
+STEP 2 — For MCQ: accept a bare letter (A/B/C/D) as matching that option. "A" = option (A) is correct.
+STEP 3 — Compare: does the student answer match what you found in STEP 1?
+STEP 4 — Output the result using EXACTLY the format below.
 
 EXAM PAPER:
 {paper_text}
@@ -1067,27 +1072,28 @@ EXAM PAPER:
 STUDENT ANSWERS:
 {answers_formatted}
 
-GRADING RULES — follow these exactly:
-1. For EACH question, first solve it yourself independently to find the correct answer.
-2. For MCQ questions: if the student wrote only a letter (A/B/C/D), match it to the option letter in the paper — do NOT require them to write out the full option text. "A" is correct if option (A) is correct.
-3. Compare the student's answer to the correct answer you computed in step 1.
-4. Award FULL marks if and only if the student's answer matches the correct answer.
-5. Your SCORE LINE must match your VERDICT — never write 0/1 and then say the answer is correct.
+OUTPUT FORMAT — use this exactly for each answered question:
 
-For every question that has a student answer, output EXACTLY this format:
-**Q[n]** — [marks awarded]/[marks available] — ✅ Correct / ❌ Incorrect
-Correct answer: [correct answer]
-Student answer: [their answer]
-[One sentence: either "Well done!" if correct, or the key mistake / what the correct approach is if wrong]
+If the student is CORRECT:
+**Q[n]** — ✅ Correct — 1/1
+Correct answer: [answer]
+Feedback: [one sentence confirming the approach]
 
-For unanswered questions: **Q[n]** — 0/[marks] — Not attempted
+If the student is INCORRECT:
+**Q[n]** — ❌ Incorrect — 0/1
+Correct answer: [answer]
+Student gave: [their answer]
+Feedback: [one sentence explaining the error]
 
-After all questions, output:
+For unanswered questions:
+**Q[n]** — ⬜ Not attempted — 0/1
+
+After ALL questions add:
 ---
 **TOTAL SCORE: [X] / [Y] ([Z]%)**
 [2–3 sentences of overall feedback]
 
-Use LaTeX for all mathematical expressions."""
+Use LaTeX for all mathematical expressions. Do NOT output any reasoning — only the formatted results."""
 
 
 def build_paper_solutions_prompt(paper_text, grade, board):
