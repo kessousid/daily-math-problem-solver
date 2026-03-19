@@ -1342,24 +1342,19 @@ with st.sidebar:
         _streak = st.session_state.streak
         _streak_display = f"🔥{_streak}" if _streak > 0 else "—"
         _user   = st.session_state.get("supabase_user")
-        _user_label = f"<div style='font-size:0.75rem;color:#a78bfa;margin-top:0.3rem;'>👤 {_user['email']}</div>" if _user else ""
-        st.markdown(f"""
-<div style="text-align:center;padding:1rem 0 0.5rem;">
-    <div style="font-size:2rem;">{rank_emoji}</div>
-    <div class="rank-pill">{rank}</div>
-    {_user_label}
-    <div style="margin-top:0.8rem;display:flex;gap:8px;justify-content:center;">
-        <div class="stat-card" style="flex:1;">
-            <div class="stat-number">{n}</div>
-            <div class="stat-label">solved</div>
-        </div>
-        <div class="stat-card" style="flex:1;">
-            <div class="stat-number">{_streak_display}</div>
-            <div class="stat-label">streak</div>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+        _user_label = (f"<div style='font-size:0.75rem;color:#a78bfa;margin-top:0.3rem;'>👤 {_user['email']}</div>"
+                       if _user else "<span></span>")
+        st.markdown(
+            f"<div style='text-align:center;padding:1rem 0 0.5rem;'>"
+            f"<div style='font-size:2rem;'>{rank_emoji}</div>"
+            f"<div class='rank-pill'>{rank}</div>"
+            f"{_user_label}"
+            f"<div style='margin-top:0.8rem;display:flex;gap:8px;justify-content:center;'>"
+            f"<div class='stat-card' style='flex:1;'><div class='stat-number'>{n}</div><div class='stat-label'>solved</div></div>"
+            f"<div class='stat-card' style='flex:1;'><div class='stat-number'>{_streak_display}</div><div class='stat-label'>streak</div></div>"
+            f"</div></div>",
+            unsafe_allow_html=True,
+        )
         st.divider()
 
         grade    = st.selectbox("📚 Level / Exam", GRADES)
