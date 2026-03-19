@@ -1421,13 +1421,19 @@ with st.sidebar:
         st.divider()
         _sb_user = st.session_state.get("supabase_user")
         if _sb_user:
-            st.markdown(f"<div style='color:#a78bfa;font-size:0.85rem;margin-bottom:0.5rem;'>👤 {_sb_user['email']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='color:#a78bfa;font-size:0.85rem;margin-bottom:0.4rem;'>👤 {_sb_user['email']}</div>", unsafe_allow_html=True)
             if st.button("Sign Out", use_container_width=True):
                 st.session_state.supabase_user = None
                 st.rerun()
         else:
             if get_supabase():
-                with st.expander("👤 Sign In / Create Account", expanded=False):
+                if "show_auth" not in st.session_state:
+                    st.session_state.show_auth = False
+                st.markdown("<div style='font-size:0.78rem;color:rgba(226,232,240,0.45);margin-bottom:0.4rem;'>Sign in to save your streak &amp; progress across sessions</div>", unsafe_allow_html=True)
+                if st.button("👤 Sign In / Create Account", use_container_width=True, key="btn_show_auth"):
+                    st.session_state.show_auth = not st.session_state.show_auth
+                    st.rerun()
+                if st.session_state.show_auth:
                     _auth_tab = st.radio("", ["Sign In", "Create Account"], horizontal=True, key="auth_mode", label_visibility="collapsed")
                     _email    = st.text_input("Email", key="auth_email")
                     _pw       = st.text_input("Password", type="password", key="auth_pw")
@@ -1437,13 +1443,13 @@ with st.sidebar:
                                 _u, _err = sb_sign_in(_email, _pw)
                                 if _u:
                                     st.session_state.supabase_user = {"id": _u.id, "email": _u.email}
+                                    st.session_state.show_auth = False
                                     _stats = sb_load_stats(_u.id)
                                     if _stats:
                                         st.session_state.problem_count    = _stats.get("problems_solved", 0)
                                         st.session_state.streak           = _stats.get("streak", 0)
                                         _ld = _stats.get("last_solved_date")
                                         st.session_state.last_solved_date = _date.fromisoformat(_ld) if _ld else None
-                                    st.success("Signed in!")
                                     st.rerun()
                                 else:
                                     st.error(_err)
@@ -1453,7 +1459,7 @@ with st.sidebar:
                                 _u, _err = sb_sign_up(_email, _pw)
                                 if _u:
                                     st.session_state.supabase_user = {"id": _u.id, "email": _u.email}
-                                    st.success("Account created! Your progress will now be saved.")
+                                    st.session_state.show_auth = False
                                     st.rerun()
                                 else:
                                     st.error(_err)
