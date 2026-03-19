@@ -852,8 +852,12 @@ def get_client():
 def get_supabase():
     if not SUPABASE_OK:
         return None
-    url = st.secrets.get("SUPABASE_URL", "") or os.environ.get("SUPABASE_URL", "")
-    key = st.secrets.get("SUPABASE_ANON_KEY", "") or os.environ.get("SUPABASE_ANON_KEY", "")
+    try:
+        url = st.secrets.get("SUPABASE_URL", "") or os.environ.get("SUPABASE_URL", "")
+        key = st.secrets.get("SUPABASE_ANON_KEY", "") or os.environ.get("SUPABASE_ANON_KEY", "")
+    except Exception:
+        url = os.environ.get("SUPABASE_URL", "")
+        key = os.environ.get("SUPABASE_ANON_KEY", "")
     if url and key:
         return create_client(url, key)
     return None
