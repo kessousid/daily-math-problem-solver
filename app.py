@@ -881,7 +881,7 @@ Problem: {problem}
 **Common Mistakes:** <1–2 wrong-vs-correct examples in LaTeX>"""
 
 
-def build_paper_prompt(grade, board, year, topics_note):
+def build_paper_prompt(grade, board, year, topics_note, jee_type=None):
     if board:
         fmt = BOARD_FORMATS[board].get(grade, "Standard exam format for this grade.")
         year_note = f" Mirror the question style and difficulty of {board} {year} papers." if year else ""
@@ -890,9 +890,27 @@ def build_paper_prompt(grade, board, year, topics_note):
         include_note = ("Include: proper header (Board, Class, Subject, Max Marks, Time, Date), general instructions, "
                         "all sections as per format with question numbers and marks in brackets [X Marks], "
                         "MCQ with options (A)–(D), case-study with scenario + sub-parts.")
+    elif jee_type == "JEE Mains":
+        header = "Exam: IIT JEE Mains"
+        format_line = ("Format: Realistic JEE Mains paper. 90 questions, 300 marks, 3 hours. "
+                       "Section A: 20 single-correct MCQ (4 marks each, -1 negative marking). "
+                       "Section B: 10 numerical answer type (4 marks each, no negative marking). "
+                       "Difficulty: moderate, NCERT-based with application questions.")
+        include_note = ("Include: proper JEE Mains header, instructions with negative marking rules, "
+                        "all question numbers and marks in brackets [X Marks], MCQ with options (A)–(D).")
+    elif jee_type == "JEE Advanced":
+        header = "Exam: IIT JEE Advanced"
+        format_line = ("Format: Realistic JEE Advanced paper (Paper 1). 3 sections, 3 hours. "
+                       "Section 1: 6 single-correct MCQ (3 marks, -1 negative). "
+                       "Section 2: 8 multi-correct MCQ (4 marks, partial marking, -2 negative). "
+                       "Section 3: 6 integer type — answer is a non-negative integer (3 marks, no negative). "
+                       "Difficulty: high, requires deep conceptual understanding and multi-step reasoning.")
+        include_note = ("Include: proper JEE Advanced header, detailed instructions for each section type, "
+                        "question numbers and marks in brackets [X Marks], MCQ with options (A)–(D).")
     else:
-        header = f"Exam: {grade}"
-        format_line = (f"Format: Generate a realistic full-length {grade} practice paper with the actual exam's "
+        exam_label = grade
+        header = f"Exam: {exam_label}"
+        format_line = (f"Format: Generate a realistic full-length {exam_label} practice paper with the actual exam's "
                        "section structure, question types, marks, and time allocation.")
         include_note = ("Include: proper exam header (Exam name, Section, Total Marks, Time), instructions, "
                         "all question types typical of this exam with marks in brackets [X Marks]. "
@@ -971,10 +989,15 @@ def render_math_markdown(text, height=6000):
         "</script>"
         "<script async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js'></script>"
         "<style>"
-        "body { font-family: 'Segoe UI', Arial, sans-serif; padding: 1rem 1.5rem; color: #1a1a1a; line-height: 1.7; }"
-        "h1,h2,h3,h4 { color: #1e293b; margin: 1rem 0 .4rem; }"
-        "hr { border: none; border-top: 1px solid #e2e8f0; margin: .8rem 0; }"
-        "strong { font-weight: 600; } p { margin: .3rem 0; }"
+        "body { font-family: 'Segoe UI', Arial, sans-serif; padding: 1.2rem 1.8rem; background: #ffffff; color: #1a1a2e; line-height: 1.8; }"
+        "h1,h2,h3,h4 { color: #1e293b; margin: 1.1rem 0 .5rem; font-weight: 700; }"
+        "h1 { font-size: 1.3rem; border-bottom: 2px solid #8b5cf6; padding-bottom: .4rem; }"
+        "h2 { font-size: 1.1rem; color: #4c1d95; }"
+        "h3 { font-size: 1rem; color: #5b21b6; }"
+        "hr { border: none; border-top: 2px solid #e2e8f0; margin: 1rem 0; }"
+        "strong { font-weight: 700; color: #0f172a; } p { margin: .4rem 0; }"
+        "li { margin: .3rem 0; } ol,ul { padding-left: 1.4rem; }"
+        "mjx-container { font-size: 1.05em !important; }"
         "</style></head><body>"
         f"<script type='application/json' id='d'>{json_text}</script>"
         "<div id='c'></div>"
@@ -1357,6 +1380,11 @@ elif st.session_state.active_tab == 1:
     p_grade = st.selectbox("📚 Grade / Exam", PAPER_GRADES, index=4, key="p_grade")
     is_competitive = p_grade in NO_BOARD_EXAMS
 
+    # JEE Mains vs Advanced sub-option
+    jee_type = None
+    if p_grade == "IIT JEE":
+        jee_type = st.radio("📝 Paper Type", ["JEE Mains", "JEE Advanced"], horizontal=True, key="jee_type")
+
     if not is_competitive:
         pc1, pc2 = st.columns([1.2, 1])
         with pc1: p_board = st.selectbox("🏫 Board / Curriculum", BOARDS, key="p_board")
@@ -1388,17 +1416,18 @@ elif st.session_state.active_tab == 1:
         client = get_client()
         st.info("⏳ Generating your paper — this may take up to 60 seconds for a full paper…", icon="🔄")
         ph = st.empty()
-        paper = stream_response(client, build_paper_prompt(p_grade, p_board, p_year, topics_note), ph, max_tokens=8192)
+        paper = stream_response(client, build_paper_prompt(p_grade, p_board, p_year, topics_note, jee_type), ph, max_tokens=8192)
         st.session_state.paper_text = paper
-        st.session_state.paper_meta = {"grade": p_grade, "board": p_board, "year": p_year}
+        st.session_state.paper_meta = {"grade": p_grade, "board": p_board, "year": p_year, "jee_type": jee_type}
         st.rerun()
 
     if st.session_state.paper_text:
         meta = st.session_state.paper_meta or {}
         board_label = f"{meta.get('board','')} &nbsp;|&nbsp; " if meta.get('board') else ""
+        jee_label   = f" — {meta.get('jee_type','')}" if meta.get('jee_type') else ""
         year_label  = f"{meta.get('year','')} — " if meta.get('year') else ""
         st.markdown(f"""<div class="paper-header">
-            <h3 style="margin:0;color:white;">📄 {board_label}{meta.get('grade','')}</h3>
+            <h3 style="margin:0;color:white;">📄 {board_label}{meta.get('grade','')}{jee_label}</h3>
             <p style="margin:.3rem 0 0;opacity:.75;font-size:.9rem;">{year_label}AI-Generated Practice Paper</p>
         </div>""", unsafe_allow_html=True)
         render_math_markdown(st.session_state.paper_text)
