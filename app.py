@@ -848,7 +848,6 @@ def get_client():
 # ═════════════════════════════════════════════════════════════════════════════
 # SUPABASE — optional, gracefully degrades if not configured
 # ═════════════════════════════════════════════════════════════════════════════
-@st.cache_resource
 def get_supabase():
     if not SUPABASE_OK:
         return None
