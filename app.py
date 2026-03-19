@@ -1427,7 +1427,7 @@ with st.sidebar:
                 st.rerun()
         else:
             if get_supabase():
-                with st.expander("👤 Sign In / Create Account  *(optional — saves your streak)*", expanded=False):
+                with st.expander("👤 Sign In / Create Account", expanded=False):
                     _auth_tab = st.radio("", ["Sign In", "Create Account"], horizontal=True, key="auth_mode", label_visibility="collapsed")
                     _email    = st.text_input("Email", key="auth_email")
                     _pw       = st.text_input("Password", type="password", key="auth_pw")
