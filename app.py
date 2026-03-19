@@ -1741,7 +1741,7 @@ elif st.session_state.active_tab == 1:
         # ── Answer Entry ──────────────────────────────────────────────────────
         q_count = detect_question_count(st.session_state.paper_text)
 
-        with st.expander(f"✏️ Enter Your Answers ({q_count} questions detected)", expanded=False):
+        with st.expander(f"✏️ Enter Your Answers ({q_count} questions detected)", expanded=True):
             # Math keyboard
             st.markdown("<div style='font-size:0.78rem;color:rgba(226,232,240,0.45);margin-bottom:0.4rem;'>Math keyboard — select target question, then click symbol to insert</div>", unsafe_allow_html=True)
             _kb_target = st.selectbox("Insert symbol into:", [f"Q{i}" for i in range(1, q_count + 1)],
