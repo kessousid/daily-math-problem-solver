@@ -641,9 +641,27 @@ GRADE_CURRICULUM = {
         "Algebra & Geometry": ["Complex Numbers","Matrices","Vectors in 3D","Conics"],
         "Probability & Statistics": ["Random Variables","Binomial & Normal Distributions","Statistical Tests","Confidence Intervals"],
     },
+    # ── Graduate / Professional ───────────────────────────────────────────────
+    "GRE Quantitative (USA)": {
+        "Arithmetic": ["Integer Properties","Fractions & Decimals","Exponents & Roots","Percentages","Ratio & Proportion","Number Lines"],
+        "Algebra": ["Algebraic Expressions & Equations","Linear Equations & Inequalities","Quadratic Equations","Functions & Graphs","Coordinate Geometry","Systems of Equations"],
+        "Geometry": ["Lines, Angles & Triangles","Quadrilaterals & Polygons","Circles","3D Figures","Pythagorean Theorem","Perimeter, Area & Volume"],
+        "Data Analysis": ["Mean, Median & Mode","Standard Deviation & Range","Interpreting Tables & Graphs","Probability","Counting Methods","Data Interpretation"],
+        "Quantitative Comparison": ["Comparing Quantities","Number Properties","Algebraic Comparisons","Geometric Comparisons"],
+    },
+    "GMAT Quantitative (USA)": {
+        "Problem Solving": ["Arithmetic & Number Properties","Algebra & Linear Equations","Geometry","Percentages, Ratios & Proportions","Word Problems & Applied Math"],
+        "Data Sufficiency": ["Number Properties","Algebra","Geometry","Statistics","Ratio & Percentage","Logical Reasoning with Data"],
+        "Integrated Reasoning": ["Data Interpretation","Multi-source Reasoning","Table Analysis","Graphics Interpretation"],
+    },
 }
 
 GRADES = list(GRADE_CURRICULUM.keys())
+
+# Exams where Board/Curriculum and Paper Year/Style are not applicable
+NO_BOARD_EXAMS = {k for k in GRADE_CURRICULUM if not k.startswith("Grade")}
+PAPER_GRADES = [f"Grade {g}" for g in range(6, 13)] + [k for k in GRADE_CURRICULUM if not k.startswith("Grade")]
+
 DIFFICULTIES = ["Easy", "Medium", "Hard"]
 DIFFICULTY_EMOJI = {"Easy": "🟢", "Medium": "🟡", "Hard": "🔴"}
 
@@ -774,7 +792,6 @@ BOARD_FORMATS = {
 }
 
 BOARDS = list(BOARD_FORMATS.keys())
-PAPER_GRADES = [f"Grade {g}" for g in range(6, 13)]
 PAPER_YEARS = [str(y) for y in range(2024, 2014, -1)]
 
 
@@ -832,6 +849,8 @@ def build_problem_prompt(grade, difficulty, topic, subtopic):
     elif "SAT" in grade: extra = " Use SAT-style question format."
     elif "AMC" in grade or "AIME" in grade: extra = " Use AMC/AIME competition style."
     elif "UKMT" in grade: extra = " Use UKMT competition style."
+    elif "GRE" in grade: extra = " Use GRE Quantitative Reasoning style, including quantitative comparison and data interpretation question types."
+    elif "GMAT" in grade: extra = " Use GMAT Quantitative style, including problem solving and data sufficiency question types."
     return f"""You are an expert maths teacher. Generate ONE self-contained problem for:
 Level: {grade}{extra}  |  Topic: {topic} → {subtopic}  |  Difficulty: {difficulty}
 
@@ -848,6 +867,8 @@ HINT:
 def build_solution_prompt(grade, difficulty, topic, subtopic, problem):
     extra = " JEE-style shortcuts where applicable." if "JEE" in grade else ""
     extra += " Elegant olympiad reasoning." if "Olympiad" in grade or "IMO" in grade else ""
+    extra += " GRE-style clear concise explanation." if "GRE" in grade else ""
+    extra += " GMAT-style explanation including data sufficiency logic where applicable." if "GMAT" in grade else ""
     return f"""You are an expert maths tutor.{extra}
 Topic: {topic} → {subtopic}  |  Level: {grade}  |  Difficulty: {difficulty}
 Problem: {problem}
@@ -861,23 +882,36 @@ Problem: {problem}
 
 
 def build_paper_prompt(grade, board, year, topics_note):
-    fmt = BOARD_FORMATS[board].get(grade, "Standard exam format for this grade.")
-    year_note = f" Mirror the question style and difficulty of {board} {year} papers." if year else ""
+    if board:
+        fmt = BOARD_FORMATS[board].get(grade, "Standard exam format for this grade.")
+        year_note = f" Mirror the question style and difficulty of {board} {year} papers." if year else ""
+        header = f"Board: {board} ({BOARD_FORMATS[board]['full_name']})  |  Grade: {grade}  |  Year style: {year}"
+        format_line = f"Format: {fmt}{year_note}"
+        include_note = ("Include: proper header (Board, Class, Subject, Max Marks, Time, Date), general instructions, "
+                        "all sections as per format with question numbers and marks in brackets [X Marks], "
+                        "MCQ with options (A)–(D), case-study with scenario + sub-parts.")
+    else:
+        header = f"Exam: {grade}"
+        format_line = (f"Format: Generate a realistic full-length {grade} practice paper with the actual exam's "
+                       "section structure, question types, marks, and time allocation.")
+        include_note = ("Include: proper exam header (Exam name, Section, Total Marks, Time), instructions, "
+                        "all question types typical of this exam with marks in brackets [X Marks]. "
+                        "For GRE include Quantitative Comparison and Problem Solving sections. "
+                        "For GMAT include Problem Solving and Data Sufficiency sections.")
     return f"""Generate a complete mathematics practice paper for:
-Board: {board} ({BOARD_FORMATS[board]['full_name']})  |  Grade: {grade}  |  Year style: {year}
+{header}
 Topics: {topics_note}
-Format: {fmt}{year_note}
+{format_line}
 
 {LATEX_RULES}
 
-Include: proper header (Board, Class, Subject, Max Marks, Time, Date), general instructions,
-all sections as per format with question numbers and marks in brackets [X Marks],
-MCQ with options (A)–(D), case-study with scenario + sub-parts.
+{include_note}
 Do NOT include answers. Use LaTeX for all math. Output clean markdown."""
 
 
 def build_paper_solutions_prompt(paper_text, grade, board):
-    return f"""Provide COMPLETE solutions and marking scheme for every question in this {board} {grade} paper.
+    exam_ref = f"{board} {grade}" if board else grade
+    return f"""Provide COMPLETE solutions and marking scheme for every question in this {exam_ref} paper.
 
 {LATEX_RULES}
 
@@ -1320,25 +1354,34 @@ elif st.session_state.active_tab == 1:
     st.markdown("<div style='font-size:1.5rem;font-weight:800;color:#e2e8f0;margin-bottom:0.2rem;'>📋 Full Send a Paper</div>", unsafe_allow_html=True)
     st.markdown("<div style='color:rgba(226,232,240,0.45);font-size:0.88rem;margin-bottom:1.2rem;'>AI builds a complete exam paper in your board's official format. Attempt it, then reveal the full marking scheme.</div>", unsafe_allow_html=True)
 
-    pc1, pc2, pc3 = st.columns([1.2, 1, 1])
-    with pc1: p_board = st.selectbox("🏫 Board / Curriculum", BOARDS, key="p_board")
-    with pc2: p_grade = st.selectbox("📚 Grade", PAPER_GRADES, index=4, key="p_grade")
-    with pc3: p_year  = st.selectbox("📅 Paper Year / Style", PAPER_YEARS, key="p_year")
+    p_grade = st.selectbox("📚 Grade / Exam", PAPER_GRADES, index=4, key="p_grade")
+    is_competitive = p_grade in NO_BOARD_EXAMS
+
+    if not is_competitive:
+        pc1, pc2 = st.columns([1.2, 1])
+        with pc1: p_board = st.selectbox("🏫 Board / Curriculum", BOARDS, key="p_board")
+        with pc2: p_year  = st.selectbox("📅 Paper Year / Style", PAPER_YEARS, key="p_year")
+    else:
+        p_board = None
+        p_year  = None
 
     all_topics = list(GRADE_CURRICULUM.get(p_grade, {}).keys())
-    p_topics_choice = st.radio("📖 Topics", ["All topics for this grade", "Select specific topics"], horizontal=True)
+    p_topics_choice = st.radio("📖 Topics", ["All topics for this exam", "Select specific topics"], horizontal=True)
     if p_topics_choice == "Select specific topics" and all_topics:
         p_sel = st.multiselect("Choose topics", all_topics, default=all_topics[:3])
         topics_note = ", ".join(p_sel) if p_sel else "All topics"
     else:
-        topics_note = "Full syllabus for this grade"
+        topics_note = "Full syllabus for this exam"
 
-    board_grade_note = BOARD_FORMATS[p_board].get(p_grade, "")
-    if board_grade_note.startswith("Not applicable") or board_grade_note.startswith("Not standard"):
-        st.warning(f"⚠️ {board_grade_note}")
+    if not is_competitive:
+        board_grade_note = BOARD_FORMATS[p_board].get(p_grade, "")
+        if board_grade_note.startswith("Not applicable") or board_grade_note.startswith("Not standard"):
+            st.warning(f"⚠️ {board_grade_note}")
+        paper_disabled = board_grade_note.startswith(("Not applicable", "Not standard"))
+    else:
+        paper_disabled = False
 
-    gen_paper_btn = st.button("📄 Generate Exam Paper", type="primary",
-                              disabled=board_grade_note.startswith(("Not applicable", "Not standard")))
+    gen_paper_btn = st.button("📄 Generate Exam Paper", type="primary", disabled=paper_disabled)
 
     if gen_paper_btn:
         st.session_state.update(paper_solutions=None, show_paper_solutions=False)
@@ -1352,9 +1395,11 @@ elif st.session_state.active_tab == 1:
 
     if st.session_state.paper_text:
         meta = st.session_state.paper_meta or {}
+        board_label = f"{meta.get('board','')} &nbsp;|&nbsp; " if meta.get('board') else ""
+        year_label  = f"{meta.get('year','')} — " if meta.get('year') else ""
         st.markdown(f"""<div class="paper-header">
-            <h3 style="margin:0;color:white;">📄 {meta.get('board','')} &nbsp;|&nbsp; {meta.get('grade','')}</h3>
-            <p style="margin:.3rem 0 0;opacity:.75;font-size:.9rem;">{meta.get('year','')} — AI-Generated Practice Paper</p>
+            <h3 style="margin:0;color:white;">📄 {board_label}{meta.get('grade','')}</h3>
+            <p style="margin:.3rem 0 0;opacity:.75;font-size:.9rem;">{year_label}AI-Generated Practice Paper</p>
         </div>""", unsafe_allow_html=True)
         render_math_markdown(st.session_state.paper_text)
         st.divider()
