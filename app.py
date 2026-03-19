@@ -927,6 +927,18 @@ def handle_correct_answer():
     st.session_state.last_solved_date = today
     st.session_state.problem_count   += 1
 
+    # Snapshot problem into session history (newest first)
+    _pd = st.session_state.get("problem_data") or {}
+    if _pd.get("problem"):
+        st.session_state.solved_history.insert(0, {
+            "grade":      _pd.get("grade", ""),
+            "topic":      _pd.get("topic", ""),
+            "subtopic":   _pd.get("subtopic", ""),
+            "difficulty": _pd.get("difficulty", ""),
+            "problem":    _pd.get("problem", ""),
+            "solved_at":  str(today),
+        })
+
     user = st.session_state.get("supabase_user")
     if user:
         sb_save_stats(user["id"],
@@ -1314,6 +1326,8 @@ for k, v in {
     "supabase_user": None,
     # full paper answers
     "paper_score": None,
+    # solved history (current session)
+    "solved_history": [], "show_history": False,
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -1416,11 +1430,16 @@ with st.sidebar:
             f"<div class='rank-pill'>{rank}</div>"
             f"{_user_label}"
             f"<div style='margin-top:0.8rem;display:flex;gap:8px;justify-content:center;'>"
-            f"<div class='stat-card' style='flex:1;'><div class='stat-number'>{n}</div><div class='stat-label'>solved</div></div>"
             f"<div class='stat-card' style='flex:1;'><div class='stat-number'>{_streak_display}</div><div class='stat-label'>streak</div></div>"
             f"</div></div>",
             unsafe_allow_html=True,
         )
+        # Solved count as a clickable button
+        _history_label = f"{'📂' if st.session_state.show_history else '📋'} {n} solved"
+        if st.button(_history_label, use_container_width=True, key="btn_history",
+                     help="Click to view your solved problems"):
+            st.session_state.show_history = not st.session_state.show_history
+            st.rerun()
         # ── Optional user profile ─────────────────────────────────────────────
         st.divider()
         _sb_user = st.session_state.get("supabase_user")
@@ -1531,6 +1550,23 @@ for _i, (_col, _label) in enumerate(zip(_tcols, _tab_labels)):
 st.divider()
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ── Solved History Panel ──────────────────────────────────────────────────────
+if st.session_state.show_history:
+    _history = st.session_state.solved_history
+    st.markdown(f"<h3 style='color:#c4b5fd;margin-bottom:0.5rem;'>📋 Solved Problems ({len(_history)})</h3>", unsafe_allow_html=True)
+    st.caption("History is saved for this session. Sign in to persist your progress across sessions.")
+    if not _history:
+        st.info("No problems solved yet this session. Go solve some! 🚀")
+    else:
+        for _i, _entry in enumerate(_history):
+            _diff_emoji = {"Easy": "🟢", "Medium": "🟡", "Hard": "🔴", "Olympiad": "🏆"}.get(_entry.get("difficulty", ""), "⚪")
+            with st.expander(
+                f"{_diff_emoji} #{len(_history) - _i} · {_entry.get('grade','')} · {_entry.get('topic','')} · {_entry.get('difficulty','')} · {_entry.get('solved_at','')}",
+                expanded=False
+            ):
+                render_math_box(_entry.get("problem", ""), "info")
+    st.divider()
+
 # TAB 1 — DAILY PRACTICE
 # ══════════════════════════════════════════════════════════════════════════════
 if st.session_state.active_tab == 0:
