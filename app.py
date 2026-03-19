@@ -1417,28 +1417,11 @@ with st.sidebar:
             f"</div></div>",
             unsafe_allow_html=True,
         )
-        st.divider()
-
-        grade    = st.selectbox("📚 Level / Exam", GRADES)
-        topics   = list(GRADE_CURRICULUM[grade].keys())
-        topic    = st.selectbox("📖 Topic", topics)
-        subtopic = st.selectbox("📐 Subtopic", GRADE_CURRICULUM[grade][topic])
-        difficulty = st.radio("🎯 How spicy?", DIFFICULTIES, index=1,
-                              format_func=lambda d: f"{DIFFICULTY_EMOJI[d]} {d}")
-        st.divider()
-        generate_btn = st.button("🚀 Drop a Problem", use_container_width=True, type="primary")
-        if generate_btn:
-            st.session_state.active_tab = 0
-        st.divider()
-        st.markdown("<div style='color:rgba(226,232,240,0.4);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;'>Pro Tips</div>", unsafe_allow_html=True)
-        st.markdown("<div style='color:rgba(226,232,240,0.55);font-size:0.82rem;line-height:1.7;'>🎯 Always try before hitting hint<br>🧠 Understand the <em>why</em>, not just the answer<br>📈 Level up difficulty once you're comfortable</div>", unsafe_allow_html=True)
-
         # ── Optional user profile ─────────────────────────────────────────────
         st.divider()
         _sb_user = st.session_state.get("supabase_user")
         if _sb_user:
-            st.markdown("<div style='color:rgba(226,232,240,0.4);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;'>👤 Profile</div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='color:#a78bfa;font-size:0.85rem;margin-bottom:0.5rem;'>{_sb_user['email']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='color:#a78bfa;font-size:0.85rem;margin-bottom:0.5rem;'>👤 {_sb_user['email']}</div>", unsafe_allow_html=True)
             if st.button("Sign Out", use_container_width=True):
                 st.session_state.supabase_user = None
                 st.rerun()
@@ -1474,6 +1457,21 @@ with st.sidebar:
                                     st.rerun()
                                 else:
                                     st.error(_err)
+
+        st.divider()
+        grade    = st.selectbox("📚 Level / Exam", GRADES)
+        topics   = list(GRADE_CURRICULUM[grade].keys())
+        topic    = st.selectbox("📖 Topic", topics)
+        subtopic = st.selectbox("📐 Subtopic", GRADE_CURRICULUM[grade][topic])
+        difficulty = st.radio("🎯 How spicy?", DIFFICULTIES, index=1,
+                              format_func=lambda d: f"{DIFFICULTY_EMOJI[d]} {d}")
+        st.divider()
+        generate_btn = st.button("🚀 Drop a Problem", use_container_width=True, type="primary")
+        if generate_btn:
+            st.session_state.active_tab = 0
+        st.divider()
+        st.markdown("<div style='color:rgba(226,232,240,0.4);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;'>Pro Tips</div>", unsafe_allow_html=True)
+        st.markdown("<div style='color:rgba(226,232,240,0.55);font-size:0.82rem;line-height:1.7;'>🎯 Always try before hitting hint<br>🧠 Understand the <em>why</em>, not just the answer<br>📈 Level up difficulty once you're comfortable</div>", unsafe_allow_html=True)
 
         st.divider()
         st.markdown("<div style='color:rgba(226,232,240,0.4);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;'>📬 Contact Us</div>", unsafe_allow_html=True)
