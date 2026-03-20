@@ -888,6 +888,35 @@ def sb_save_stats(user_id, problems_solved, streak, last_solved_date):
     except Exception:
         pass
 
+def sb_save_problem(user_id, entry):
+    """Persist one solved problem to Supabase (requires solved_problems table)."""
+    sb = get_supabase()
+    if not sb or not user_id:
+        return
+    try:
+        sb.table("solved_problems").insert({
+            "user_id":    user_id,
+            "grade":      entry.get("grade", ""),
+            "topic":      entry.get("topic", ""),
+            "subtopic":   entry.get("subtopic", ""),
+            "difficulty": entry.get("difficulty", ""),
+            "problem":    entry.get("problem", ""),
+            "solved_at":  entry.get("solved_at", ""),
+        }).execute()
+    except Exception:
+        pass  # table may not exist yet; silent fail
+
+def sb_load_problems(user_id):
+    """Load all solved problems for a user from Supabase (newest first)."""
+    sb = get_supabase()
+    if not sb or not user_id:
+        return []
+    try:
+        r = sb.table("solved_problems").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+        return r.data or []
+    except Exception:
+        return []
+
 def sb_sign_up(email, password):
     sb = get_supabase()
     if not sb:
@@ -945,6 +974,16 @@ def handle_correct_answer():
                       st.session_state.problem_count,
                       st.session_state.streak,
                       today)
+        _pd2 = st.session_state.get("problem_data") or {}
+        if _pd2.get("problem"):
+            sb_save_problem(user["id"], {
+                "grade":      _pd2.get("grade", ""),
+                "topic":      _pd2.get("topic", ""),
+                "subtopic":   _pd2.get("subtopic", ""),
+                "difficulty": _pd2.get("difficulty", ""),
+                "problem":    _pd2.get("problem", ""),
+                "solved_at":  str(today),
+            })
 
 # ═════════════════════════════════════════════════════════════════════════════
 # PROMPTS
@@ -1057,6 +1096,39 @@ Topics: {topics_note}
 Do NOT include answers. Use LaTeX for all math. Output clean markdown."""
 
 
+def build_jee_subject_prompt(subject, q_start, topics_note):
+    """Generate exactly 30 questions for one JEE Mains subject (20 MCQ + 10 NAT)."""
+    sec_a_end   = q_start + 19
+    sec_b_start = q_start + 20
+    sec_b_end   = q_start + 29
+    return f"""Generate exactly 30 JEE Mains questions for {subject}.
+
+Topics hint: {topics_note}
+
+{LATEX_RULES}
+
+STRICT RULES:
+- Output EXACTLY 30 questions numbered Q{q_start} to Q{sec_b_end}
+- Q{q_start}–Q{sec_a_end}: Section A — Single Correct MCQ with options (A)(B)(C)(D). Label each: [4 Marks | −1 Negative]
+- Q{sec_b_start}–Q{sec_b_end}: Section B — Numerical Answer Type (attempt any 5 of these 10). Label each: [4 Marks | No Negative]
+- Difficulty: moderate to hard, NCERT-based with application
+- Do NOT include answers
+
+Format MCQ:
+Q[n]. [question] [4 Marks]
+(A) option  (B) option  (C) option  (D) option
+
+Format NAT:
+Q[n]. [question] [4 Marks]
+
+Start output with:
+## {subject} — Section A: 80 marks | Section B: max 20 marks (attempt any 5) | Subject Total: 100 marks
+### Section A — Single Correct MCQ (Q{q_start}–Q{sec_a_end}) — 80 Marks
+[20 MCQ questions]
+### Section B — Numerical Answer Type: Attempt any 5 of 10 (Q{sec_b_start}–Q{sec_b_end}) — Max 20 Marks
+[10 NAT questions]"""
+
+
 def detect_question_count(paper_text):
     """Scan paper text to find the highest question number."""
     all_nums = []
@@ -1065,8 +1137,8 @@ def detect_question_count(paper_text):
     # Lines starting with a number: "1.", "1)", "(1)", "**1.**", "**1)"
     all_nums += re.findall(r'^\s*\*{0,2}\(?\s*(\d+)\s*[.)]\*{0,2}', paper_text, re.MULTILINE)
     if all_nums:
-        return min(max(int(m) for m in all_nums), 60)
-    return 30  # fallback
+        return min(max(int(m) for m in all_nums), 100)
+    return 45  # fallback
 
 
 
@@ -1076,12 +1148,7 @@ def build_paper_grading_prompt(paper_text, answers_dict, grade, board):
     answers_formatted = "\n".join(
         f"Q{q}: {a.strip()}" for q, a in sorted(answers_dict.items()) if a.strip()
     ) or "No answers provided."
-    return f"""You are a {exam_ref} examiner. Grade each student answer by following these steps for EVERY question:
-
-STEP 1 — Solve the question yourself to find the correct answer.
-STEP 2 — For MCQ: accept a bare letter (A/B/C/D) as matching that option. "A" = option (A) is correct.
-STEP 3 — Compare: does the student answer match what you found in STEP 1?
-STEP 4 — Output the result using EXACTLY the format below.
+    return f"""You are a {exam_ref} examiner. Grade every question below.
 
 EXAM PAPER:
 {paper_text}
@@ -1089,30 +1156,44 @@ EXAM PAPER:
 STUDENT ANSWERS:
 {answers_formatted}
 
-OUTPUT FORMAT — use this exactly for each answered question:
+For EACH question, follow this exact two-part pattern:
 
-If the student is CORRECT:
+<scratch>
+Solve the question yourself.
+Identify the correct answer.
+Compare with the student's answer.
+MCQ rule: bare letter A/B/C/D matches that labelled option — "A" = "(A) …text…"
+Accept equivalent forms: 0.5 = 1/2, x=3 or x = 3, −2 and (−2).
+Unanswered: keywords prove/show that/derive/demonstrate → proof; otherwise → not attempted.
+</scratch>
+[output your single verdict for this question — no backtracking after </scratch>]
+
+VERDICT FORMAT — choose exactly one:
+
+If CORRECT:
 **Q[n]** — ✅ Correct — 1/1
-Correct answer: [answer]
-Feedback: [one sentence confirming the approach]
+Correct answer: [answer in LaTeX]
+Feedback: [one sentence]
 
-If the student is INCORRECT:
+If INCORRECT:
 **Q[n]** — ❌ Incorrect — 0/1
-Correct answer: [answer]
+Correct answer: [answer in LaTeX]
 Student gave: [their answer]
-Feedback: [one sentence explaining the error]
+Feedback: [one sentence]
 
-For unanswered questions: first check if the question is a proof/derivation/subjective question (keywords: prove, show that, derive, demonstrate, establish). If yes:
+If unanswered proof/subjective:
 **Q[n]** — 📝 Proof/subjective — not auto-graded
-If it is a regular question left blank:
+
+If unanswered regular:
 **Q[n]** — ⬜ Not attempted — 0/1
 
-After ALL questions add:
+After ALL questions:
 ---
 **TOTAL SCORE: [X] / [Y] ([Z]%)**
-[2–3 sentences of overall feedback]
+Y = TOTAL questions in the paper (every question including unanswered).
+[2–3 sentences overall feedback]
 
-Use LaTeX for all mathematical expressions. Do NOT output any reasoning — only the formatted results."""
+Use LaTeX for all math. The <scratch>…</scratch> blocks are hidden from the student — put ALL working there and commit to ONE verdict after each </scratch>."""
 
 
 def build_paper_solutions_prompt(paper_text, grade, board):
@@ -1546,17 +1627,28 @@ for _i, (_col, _label) in enumerate(zip(_tcols, _tab_labels)):
                      type="primary" if st.session_state.active_tab == _i else "secondary",
                      key=f"tab_btn_{_i}"):
             st.session_state.active_tab = _i
+            if _i != 0:  # leaving Daily Drop — close history panel
+                st.session_state.show_history = False
             st.rerun()
 st.divider()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ── Solved History Panel ──────────────────────────────────────────────────────
-if st.session_state.show_history:
-    _history = st.session_state.solved_history
-    st.markdown(f"<h3 style='color:#c4b5fd;margin-bottom:0.5rem;'>📋 Solved Problems ({len(_history)})</h3>", unsafe_allow_html=True)
-    st.caption("History is saved for this session. Sign in to persist your progress across sessions.")
+if st.session_state.show_history and st.session_state.active_tab == 0:
+    _sb_user = st.session_state.get("supabase_user")
+
+    # Prefer Supabase history (all sessions) when logged in
+    if _sb_user:
+        _history = sb_load_problems(_sb_user["id"])
+        st.markdown(f"<h3 style='color:#c4b5fd;margin-bottom:0.5rem;'>📋 All Solved Problems ({len(_history)})</h3>", unsafe_allow_html=True)
+        st.caption("Showing your complete history across all sessions.")
+    else:
+        _history = st.session_state.solved_history
+        st.markdown(f"<h3 style='color:#c4b5fd;margin-bottom:0.5rem;'>📋 Solved Problems ({len(_history)})</h3>", unsafe_allow_html=True)
+        st.caption("Showing this session only. Sign in to save and view your full history across sessions.")
+
     if not _history:
-        st.info("No problems solved yet this session. Go solve some! 🚀")
+        st.info("No problems solved yet. Solve one to see it here! 🚀")
     else:
         for _i, _entry in enumerate(_history):
             _diff_emoji = {"Easy": "🟢", "Medium": "🟡", "Hard": "🔴", "Olympiad": "🏆"}.get(_entry.get("difficulty", ""), "⚪")
@@ -1773,9 +1865,40 @@ elif st.session_state.active_tab == 1:
     if gen_paper_btn:
         st.session_state.update(paper_solutions=None, show_paper_solutions=False)
         client = get_client()
-        st.info("⏳ Generating your paper — this may take up to 60 seconds for a full paper…", icon="🔄")
-        ph = st.empty()
-        paper = stream_response(client, build_paper_prompt(p_grade, p_board, p_year, topics_note, jee_type), ph, max_tokens=8192)
+
+        if jee_type == "JEE Mains":
+            # Generate 3 subjects separately to stay within token limits
+            jee_header = (
+                "# JEE Mains — Full Practice Paper\n\n"
+                "| | Physics | Chemistry | Mathematics | **Total** |\n"
+                "|---|---|---|---|---|\n"
+                "| Section A (20 MCQ × 4) | 80 | 80 | 80 | **240** |\n"
+                "| Section B (attempt 5 of 10 NAT × 4) | 20 | 20 | 20 | **60** |\n"
+                "| **Subject Total** | **100** | **100** | **100** | **300** |\n\n"
+                "**Instructions:**\n"
+                "- Section A: All 20 MCQ are mandatory — +4 correct, −1 wrong, 0 unattempted\n"
+                "- Section B: Attempt **any 5** of 10 NAT questions — +4 correct, no negative marking\n"
+                "- Time: 3 Hours\n\n"
+                "---\n"
+            )
+            paper_parts = [jee_header]
+            subjects_map = [("Physics", 1), ("Chemistry", 31), ("Mathematics", 61)]
+            for subj, q_start in subjects_map:
+                q_end = q_start + 29
+                st.info(f"⏳ Generating {subj} (Q{q_start}–Q{q_end})…", icon="🔄")
+                ph = st.empty()
+                part = stream_response(
+                    client,
+                    build_jee_subject_prompt(subj, q_start, topics_note),
+                    ph, max_tokens=4500
+                )
+                paper_parts.append(part)
+            paper = "\n\n---\n\n".join(paper_parts)
+        else:
+            st.info("⏳ Generating your paper — this may take up to 60 seconds for a full paper…", icon="🔄")
+            ph = st.empty()
+            paper = stream_response(client, build_paper_prompt(p_grade, p_board, p_year, topics_note, jee_type), ph, max_tokens=8192)
+
         st.session_state.paper_text = paper
         st.session_state.paper_meta = {"grade": p_grade, "board": p_board, "year": p_year, "jee_type": jee_type}
         st.rerun()
@@ -1855,6 +1978,8 @@ elif st.session_state.active_tab == 1:
                         ),
                         ph, max_tokens=8192
                     )
+                    # Strip internal <scratch>…</scratch> reasoning blocks before display
+                    score_text = re.sub(r'<scratch>.*?</scratch>', '', score_text, flags=re.DOTALL).strip()
                     st.session_state.paper_score = score_text
                     st.rerun()
 

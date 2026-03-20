@@ -83,14 +83,14 @@ class TestDetectQuestionCount:
         assert app.detect_question_count(text) == 25
 
     def test_empty_returns_fallback(self):
-        assert app.detect_question_count("") == 30
+        assert app.detect_question_count("") == 45
 
     def test_plain_text_no_numbers_returns_fallback(self):
-        assert app.detect_question_count("Here is some text with no question numbers.") == 30
+        assert app.detect_question_count("Here is some text with no question numbers.") == 45
 
-    def test_cap_at_60(self):
-        text = "\n".join(f"Q{i}. question" for i in range(1, 100))
-        assert app.detect_question_count(text) == 60
+    def test_cap_at_100(self):
+        text = "\n".join(f"Q{i}. question" for i in range(1, 150))
+        assert app.detect_question_count(text) == 100
 
     def test_sat_44_questions(self):
         text = "\n".join(f"Question {i}\nAnswer choices here" for i in range(1, 45))
@@ -100,6 +100,10 @@ class TestDetectQuestionCount:
         # Paper has both Q1 and numbered lines — should return the higher
         text = "Q1. first\nQ2. second\n10. tenth"
         assert app.detect_question_count(text) == 10
+
+    def test_jee_90_questions(self):
+        text = "\n".join(f"Q{i}. Some question" for i in range(1, 91))
+        assert app.detect_question_count(text) == 90
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -181,7 +185,8 @@ class TestBuildPaperGradingPrompt:
         assert "Q2: x=2" in self.prompt
 
     def test_contains_step_by_step_solve(self):
-        assert "STEP 1" in self.prompt
+        prompt_lower = self.prompt.lower()
+        assert "independently" in prompt_lower or "solve" in prompt_lower
 
     def test_mcq_letter_matching_instruction(self):
         prompt_lower = self.prompt.lower()
