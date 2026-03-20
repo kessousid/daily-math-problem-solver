@@ -1847,25 +1847,7 @@ elif st.session_state.active_tab == 1:
         q_count = detect_question_count(st.session_state.paper_text)
 
         with st.expander(f"✏️ Enter Your Answers ({q_count} questions detected)", expanded=False):
-            st.caption("For proof/subjective questions, leave the box blank — they will be noted as not auto-gradable.")
-            # Math keyboard
-            st.markdown("<div style='font-size:0.78rem;color:rgba(226,232,240,0.45);margin-bottom:0.4rem;'>Math keyboard — select target question, then click symbol to insert</div>", unsafe_allow_html=True)
-            _kb_target = st.selectbox("Insert symbol into:", [f"Q{i}" for i in range(1, q_count + 1)],
-                                      key="paper_kb_target", label_visibility="collapsed")
-            _kb_q_num  = int(_kb_target[1:])
-            _kb_key    = f"paper_ans_{_kb_q_num}"
-            KB_ROWS = [
-                ["π", "∞", "√", "∛", "²", "³", "±", "×", "÷", "≠"],
-                ["≤", "≥", "≈", "∈", "∉", "⊂", "∪", "∩", "Σ", "∫"],
-                ["α", "β", "γ", "θ", "λ", "σ", "Δ", "∂", "∝", "∴"],
-            ]
-            for row in KB_ROWS:
-                _kcols = st.columns(len(row))
-                for _ki, _sym in enumerate(row):
-                    if _kcols[_ki].button(_sym, key=f"pkb_{_sym}", use_container_width=True):
-                        st.session_state[_kb_key] = st.session_state.get(_kb_key, "") + _sym
-
-            st.markdown("---")
+            st.caption("MCQ: type A / B / C / D. Numerical: type the value. Leave blank to skip.")
 
             # Numbered answer inputs — 3 per row
             for _row_start in range(1, q_count + 1, 3):
