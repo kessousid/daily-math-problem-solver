@@ -1857,6 +1857,36 @@ elif st.session_state.active_tab == 1:
                         st.text_input(f"Q{_qi}", key=f"paper_ans_{_qi}",
                                       placeholder=f"Answer for Q{_qi}")
 
+            # ── Math Symbol Keyboard (optional) ───────────────────────────
+            with st.expander("🔢 Math Symbol Keyboard (optional — for Olympiad / advanced answers)", expanded=False):
+                st.caption("Click a symbol to add it to the scratch pad, then copy-paste into your answer box.")
+                if "math_scratch" not in st.session_state:
+                    st.session_state.math_scratch = ""
+
+                _sym_rows = [
+                    ["π", "∞", "√", "∛", "²", "³", "±", "×", "÷"],
+                    ["≠", "≤", "≥", "≈", "∈", "∉", "⊂", "∪", "∩"],
+                    ["Σ", "∫", "∂", "∝", "∴", "α", "β", "γ", "θ"],
+                    ["λ", "σ", "Δ", "μ", "φ", "ψ", "ω", "ε", "η"],
+                ]
+                for _sym_row in _sym_rows:
+                    _sym_cols = st.columns(len(_sym_row))
+                    for _sci, _sym in enumerate(_sym_row):
+                        with _sym_cols[_sci]:
+                            if st.button(_sym, key=f"sym_{_sym}", use_container_width=True):
+                                st.session_state.math_scratch += _sym
+                                st.rerun()
+
+                _scratch_col, _sclear_col = st.columns([4, 1])
+                with _scratch_col:
+                    st.text_input("Scratch pad", key="math_scratch",
+                                  placeholder="Symbols appear here — copy and paste into your answer box")
+                with _sclear_col:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.button("Clear", key="sym_clear", use_container_width=True):
+                        st.session_state.math_scratch = ""
+                        st.rerun()
+
             st.markdown("---")
             _submit_col, _clear_col = st.columns([2, 1])
             with _submit_col:
