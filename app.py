@@ -1111,6 +1111,7 @@ STRICT RULES:
 - Q{sec_b_start}–Q{sec_b_end}: Section B — Numerical Answer Type (attempt any 5 of 10). Label each: [4 Marks | No Negative]
 - Difficulty: moderate to hard, JEE Mains level
 - Do NOT include answers
+- Do NOT add topic names, subject headers, or chapter labels before individual questions — just Q[n]. followed immediately by the question text
 
 Format MCQ:
 Q[n]. [question] [4 Marks | −1 Negative]
@@ -1145,7 +1146,13 @@ def build_paper_grading_prompt(paper_text, answers_dict, grade, board):
     answers_formatted = "\n".join(
         f"Q{q}: {a.strip()}" for q, a in sorted(answers_dict.items()) if a.strip()
     ) or "No answers provided."
-    return f"""You are a {exam_ref} examiner. Grade every question below.
+    return f"""You are a {exam_ref} examiner. Silently solve each question, then write ONE verdict per question using the compact format below. Never output the same question number twice.
+
+RULES (apply silently):
+- Solve every question yourself before judging.
+- MCQ: bare letter A/B/C/D matches that labelled option. "A" = "(A) text".
+- Accept equivalent forms: 0.5=1/2, x=3 or x = 3.
+- Unanswered + prove/show that/derive/demonstrate = proof. Unanswered other = not attempted.
 
 EXAM PAPER:
 {paper_text}
@@ -1153,44 +1160,19 @@ EXAM PAPER:
 STUDENT ANSWERS:
 {answers_formatted}
 
-For EACH question, follow this exact two-part pattern:
+COMPACT OUTPUT FORMAT — one block per question, nothing else:
 
-<scratch>
-Solve the question yourself.
-Identify the correct answer.
-Compare with the student's answer.
-MCQ rule: bare letter A/B/C/D matches that labelled option — "A" = "(A) …text…"
-Accept equivalent forms: 0.5 = 1/2, x=3 or x = 3, −2 and (−2).
-Unanswered: keywords prove/show that/derive/demonstrate → proof; otherwise → not attempted.
-</scratch>
-[output your single verdict for this question — no backtracking after </scratch>]
-
-VERDICT FORMAT — choose exactly one:
-
-If CORRECT:
-**Q[n]** — ✅ Correct — 1/1
-Correct answer: [answer in LaTeX]
-Feedback: [one sentence]
-
-If INCORRECT:
-**Q[n]** — ❌ Incorrect — 0/1
-Correct answer: [answer in LaTeX]
-Student gave: [their answer]
-Feedback: [one sentence]
-
-If unanswered proof/subjective:
-**Q[n]** — 📝 Proof/subjective — not auto-graded
-
-If unanswered regular:
-**Q[n]** — ⬜ Not attempted — 0/1
+✅ **Q[n]** Correct — 1/1 | Ans: [answer] | [≤8 word feedback]
+❌ **Q[n]** Incorrect — 0/1 | Ans: [answer] | Student: [their answer] | [≤8 word feedback]
+📝 **Q[n]** Proof/subjective — not auto-graded
+⬜ **Q[n]** Not attempted — 0/1
 
 After ALL questions:
 ---
-**TOTAL SCORE: [X] / [Y] ([Z]%)**
-Y = TOTAL questions in the paper (every question including unanswered).
-[2–3 sentences overall feedback]
+**TOTAL SCORE: [X] / [Y]** where Y = total questions in paper (including unanswered)
+[One sentence summary]
 
-Use LaTeX for all math. The <scratch>…</scratch> blocks are hidden from the student — put ALL working there and commit to ONE verdict after each </scratch>."""
+Use LaTeX for all math. Output ONLY the compact verdict lines above."""
 
 
 def build_paper_solutions_prompt(paper_text, grade, board):
@@ -1971,8 +1953,6 @@ elif st.session_state.active_tab == 1:
                         ),
                         ph, max_tokens=8192
                     )
-                    # Strip internal <scratch>…</scratch> reasoning blocks before display
-                    score_text = re.sub(r'<scratch>.*?</scratch>', '', score_text, flags=re.DOTALL).strip()
                     st.session_state.paper_score = score_text
                     st.rerun()
 
