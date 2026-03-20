@@ -1096,33 +1096,30 @@ Topics: {topics_note}
 Do NOT include answers. Use LaTeX for all math. Output clean markdown."""
 
 
-def build_jee_subject_prompt(subject, q_start, topics_note):
-    """Generate exactly 30 questions for one JEE Mains subject (20 MCQ + 10 NAT)."""
+def build_jee_batch_prompt(q_start, topics_note):
+    """Generate a batch of 30 JEE Mains questions on the user's selected topics."""
     sec_a_end   = q_start + 19
     sec_b_start = q_start + 20
     sec_b_end   = q_start + 29
-    return f"""Generate exactly 30 JEE Mains questions for {subject}.
-
-Topics hint: {topics_note}
+    return f"""Generate exactly 30 JEE Mains practice questions on these topics: {topics_note}
 
 {LATEX_RULES}
 
 STRICT RULES:
 - Output EXACTLY 30 questions numbered Q{q_start} to Q{sec_b_end}
 - Q{q_start}–Q{sec_a_end}: Section A — Single Correct MCQ with options (A)(B)(C)(D). Label each: [4 Marks | −1 Negative]
-- Q{sec_b_start}–Q{sec_b_end}: Section B — Numerical Answer Type (attempt any 5 of these 10). Label each: [4 Marks | No Negative]
-- Difficulty: moderate to hard, NCERT-based with application
+- Q{sec_b_start}–Q{sec_b_end}: Section B — Numerical Answer Type (attempt any 5 of 10). Label each: [4 Marks | No Negative]
+- Difficulty: moderate to hard, JEE Mains level
 - Do NOT include answers
 
 Format MCQ:
-Q[n]. [question] [4 Marks]
+Q[n]. [question] [4 Marks | −1 Negative]
 (A) option  (B) option  (C) option  (D) option
 
 Format NAT:
-Q[n]. [question] [4 Marks]
+Q[n]. [question] [4 Marks | No Negative]
 
-Start output with:
-## {subject} — Section A: 80 marks | Section B: max 20 marks (attempt any 5) | Subject Total: 100 marks
+Start with:
 ### Section A — Single Correct MCQ (Q{q_start}–Q{sec_a_end}) — 80 Marks
 [20 MCQ questions]
 ### Section B — Numerical Answer Type: Attempt any 5 of 10 (Q{sec_b_start}–Q{sec_b_end}) — Max 20 Marks
@@ -1867,29 +1864,25 @@ elif st.session_state.active_tab == 1:
         client = get_client()
 
         if jee_type == "JEE Mains":
-            # Generate 3 subjects separately to stay within token limits
+            # Generate in 3 batches of 30 to avoid token limits, all on user's topics
             jee_header = (
-                "# JEE Mains — Full Practice Paper\n\n"
-                "| | Physics | Chemistry | Mathematics | **Total** |\n"
-                "|---|---|---|---|---|\n"
-                "| Section A (20 MCQ × 4) | 80 | 80 | 80 | **240** |\n"
-                "| Section B (attempt 5 of 10 NAT × 4) | 20 | 20 | 20 | **60** |\n"
-                "| **Subject Total** | **100** | **100** | **100** | **300** |\n\n"
+                "# JEE Mains — Practice Paper\n\n"
+                f"**Topics:** {topics_note}\n\n"
+                "**Total Questions:** 90 &nbsp;|&nbsp; **Maximum Marks:** 300 &nbsp;|&nbsp; **Time:** 3 Hours\n\n"
                 "**Instructions:**\n"
-                "- Section A: All 20 MCQ are mandatory — +4 correct, −1 wrong, 0 unattempted\n"
-                "- Section B: Attempt **any 5** of 10 NAT questions — +4 correct, no negative marking\n"
-                "- Time: 3 Hours\n\n"
+                "- Section A: 20 Single Correct MCQ — +4 correct, −1 wrong, 0 unattempted\n"
+                "- Section B: 10 NAT questions, attempt **any 5** — +4 correct, no negative marking\n"
+                "- Marks per 30-question block: Section A 80 + Section B max 20 = **100 marks**\n\n"
                 "---\n"
             )
             paper_parts = [jee_header]
-            subjects_map = [("Physics", 1), ("Chemistry", 31), ("Mathematics", 61)]
-            for subj, q_start in subjects_map:
+            for batch, q_start in enumerate([1, 31, 61], 1):
                 q_end = q_start + 29
-                st.info(f"⏳ Generating {subj} (Q{q_start}–Q{q_end})…", icon="🔄")
+                st.info(f"⏳ Generating questions Q{q_start}–Q{q_end} (batch {batch}/3)…", icon="🔄")
                 ph = st.empty()
                 part = stream_response(
                     client,
-                    build_jee_subject_prompt(subj, q_start, topics_note),
+                    build_jee_batch_prompt(q_start, topics_note),
                     ph, max_tokens=4500
                 )
                 paper_parts.append(part)
