@@ -166,7 +166,7 @@ st.markdown("""
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/app/static/sw.js', {scope: '/'})
+    navigator.serviceWorker.register('/app/static/sw.js')
       .catch(err => console.log('SW registration failed:', err));
   });
 }
