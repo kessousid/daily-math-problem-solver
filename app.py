@@ -1060,13 +1060,21 @@ def build_paper_prompt(grade, board, year, topics_note, jee_type=None):
                         "all sections as per format with question numbers and marks in brackets [X Marks], "
                         "MCQ with options (A)–(D), case-study with scenario + sub-parts.")
     elif jee_type == "JEE Mains":
-        header = "Exam: IIT JEE Mains"
-        format_line = ("Format: Realistic JEE Mains paper. 90 questions, 300 marks, 3 hours. "
-                       "Section A: 20 single-correct MCQ (4 marks each, -1 negative marking). "
-                       "Section B: 10 numerical answer type (4 marks each, no negative marking). "
-                       "Difficulty: moderate, NCERT-based with application questions.")
-        include_note = ("Include: proper JEE Mains header, instructions with negative marking rules, "
-                        "all question numbers and marks in brackets [X Marks], MCQ with options (A)–(D).")
+        header = "Exam: JEE Mains — Mathematics Section"
+        format_line = (
+            "Format: JEE Mains Mathematics section. 30 questions total, 100 marks, 1 hour.\n"
+            "Section A (Q1–Q20): 20 Single-Correct MCQ — +4 marks correct, −1 mark incorrect, 0 unattempted.\n"
+            "Section B (Q21–Q30): 10 Numerical Value questions — attempt any 5, +4 marks correct, no negative marking.\n"
+            "Difficulty: moderate to hard, NCERT-based with application. Do NOT include Physics or Chemistry."
+        )
+        include_note = (
+            "Include:\n"
+            "- Header: JEE Mains | Mathematics | Maximum Marks: 100 | Duration: 1 Hour\n"
+            "- Marking scheme instructions (MCQ: +4/−1, Numerical: +4/no negative, attempt any 5 of Section B)\n"
+            "- Section A heading, then Q1–Q20 as MCQ with options (A)(B)(C)(D), each labelled [4 Marks]\n"
+            "- Section B heading, then Q21–Q30 as Numerical Value questions, each labelled [4 Marks]\n"
+            "- Do NOT add topic sub-headers before individual questions — just Q[n]. then the question"
+        )
     elif jee_type == "JEE Advanced":
         header = "Exam: IIT JEE Advanced"
         format_line = ("Format: Realistic JEE Advanced paper (Paper 1). 3 sections, 3 hours. "
@@ -1095,36 +1103,6 @@ Topics: {topics_note}
 {include_note}
 Do NOT include answers. Use LaTeX for all math. Output clean markdown."""
 
-
-def build_jee_batch_prompt(q_start, topics_note):
-    """Generate a batch of 30 JEE Mains questions on the user's selected topics."""
-    sec_a_end   = q_start + 19
-    sec_b_start = q_start + 20
-    sec_b_end   = q_start + 29
-    return f"""Generate exactly 30 JEE Mains practice questions on these topics: {topics_note}
-
-{LATEX_RULES}
-
-STRICT RULES:
-- Output EXACTLY 30 questions numbered Q{q_start} to Q{sec_b_end}
-- Q{q_start}–Q{sec_a_end}: Section A — Single Correct MCQ with options (A)(B)(C)(D). Label each: [4 Marks | −1 Negative]
-- Q{sec_b_start}–Q{sec_b_end}: Section B — Numerical Answer Type (attempt any 5 of 10). Label each: [4 Marks | No Negative]
-- Difficulty: moderate to hard, JEE Mains level
-- Do NOT include answers
-- Do NOT add topic names, subject headers, or chapter labels before individual questions — just Q[n]. followed immediately by the question text
-
-Format MCQ:
-Q[n]. [question] [4 Marks | −1 Negative]
-(A) option  (B) option  (C) option  (D) option
-
-Format NAT:
-Q[n]. [question] [4 Marks | No Negative]
-
-Start with:
-### Section A — Single Correct MCQ (Q{q_start}–Q{sec_a_end}) — 80 Marks
-[20 MCQ questions]
-### Section B — Numerical Answer Type: Attempt any 5 of 10 (Q{sec_b_start}–Q{sec_b_end}) — Max 20 Marks
-[10 NAT questions]"""
 
 
 def detect_question_count(paper_text):
@@ -1845,34 +1823,9 @@ elif st.session_state.active_tab == 1:
         st.session_state.update(paper_solutions=None, show_paper_solutions=False)
         client = get_client()
 
-        if jee_type == "JEE Mains":
-            # Generate in 3 batches of 30 to avoid token limits, all on user's topics
-            jee_header = (
-                "# JEE Mains — Practice Paper\n\n"
-                f"**Topics:** {topics_note}\n\n"
-                "**Total Questions:** 90 &nbsp;|&nbsp; **Maximum Marks:** 300 &nbsp;|&nbsp; **Time:** 3 Hours\n\n"
-                "**Instructions:**\n"
-                "- Section A: 20 Single Correct MCQ — +4 correct, −1 wrong, 0 unattempted\n"
-                "- Section B: 10 NAT questions, attempt **any 5** — +4 correct, no negative marking\n"
-                "- Marks per 30-question block: Section A 80 + Section B max 20 = **100 marks**\n\n"
-                "---\n"
-            )
-            paper_parts = [jee_header]
-            for batch, q_start in enumerate([1, 31, 61], 1):
-                q_end = q_start + 29
-                st.info(f"⏳ Generating questions Q{q_start}–Q{q_end} (batch {batch}/3)…", icon="🔄")
-                ph = st.empty()
-                part = stream_response(
-                    client,
-                    build_jee_batch_prompt(q_start, topics_note),
-                    ph, max_tokens=4500
-                )
-                paper_parts.append(part)
-            paper = "\n\n---\n\n".join(paper_parts)
-        else:
-            st.info("⏳ Generating your paper — this may take up to 60 seconds for a full paper…", icon="🔄")
-            ph = st.empty()
-            paper = stream_response(client, build_paper_prompt(p_grade, p_board, p_year, topics_note, jee_type), ph, max_tokens=8192)
+        st.info("⏳ Generating your paper — this may take up to 30 seconds…", icon="🔄")
+        ph = st.empty()
+        paper = stream_response(client, build_paper_prompt(p_grade, p_board, p_year, topics_note, jee_type), ph, max_tokens=8192)
 
         st.session_state.paper_text = paper
         st.session_state.paper_meta = {"grade": p_grade, "board": p_board, "year": p_year, "jee_type": jee_type}
