@@ -1092,7 +1092,10 @@ def build_paper_prompt(grade, board, year, topics_note, jee_type=None):
         include_note = ("Include: proper exam header (Exam name, Section, Total Marks, Time), instructions, "
                         "all question types typical of this exam with marks in brackets [X Marks]. "
                         "For GRE include Quantitative Comparison and Problem Solving sections. "
-                        "For GMAT include Problem Solving and Data Sufficiency sections.")
+                        "For GMAT include Problem Solving and Data Sufficiency sections. "
+                        "CRITICAL: Number every question sequentially as **Problem 1.**, **Problem 2.**, **Problem 3.** etc. "
+                        "(or **Q1.**, **Q2.** for MCQ-style exams). Never use sub-labels or skip numbers. "
+                        "Each question must start on its own line with this bold label.")
     return f"""Generate a complete mathematics practice paper for:
 {header}
 Topics: {topics_note}
@@ -1108,10 +1111,12 @@ Do NOT include answers. Use LaTeX for all math. Output clean markdown."""
 def detect_question_count(paper_text):
     """Scan paper text to find the highest question number."""
     all_nums = []
-    # Q1, Q.1, Question 1, Question: 1
-    all_nums += re.findall(r'\b(?:Q\.?\s*|Question\s*)(\d+)\b', paper_text, re.IGNORECASE)
+    # Q1, Q.1, Question 1, Problem 1 (competition/AIME/AMC style)
+    all_nums += re.findall(r'\b(?:Q\.?\s*|Question\s*|Problem\s*)(\d+)\b', paper_text, re.IGNORECASE)
     # Lines starting with a number: "1.", "1)", "(1)", "**1.**", "**1)"
     all_nums += re.findall(r'^\s*\*{0,2}\(?\s*(\d+)\s*[.)]\*{0,2}', paper_text, re.MULTILINE)
+    # Bold problem/question lines at line start: **Problem 1.** or **Q 1.**
+    all_nums += re.findall(r'^\s*\*+\s*(?:Problem|Question|Q\.?)\s*(\d+)', paper_text, re.MULTILINE | re.IGNORECASE)
     if all_nums:
         return min(max(int(m) for m in all_nums), 100)
     return 45  # fallback
@@ -1124,13 +1129,16 @@ def build_paper_grading_prompt(paper_text, answers_dict, grade, board):
     answers_formatted = "\n".join(
         f"Q{q}: {a.strip()}" for q, a in sorted(answers_dict.items()) if a.strip()
     ) or "No answers provided."
-    return f"""You are a {exam_ref} examiner. Silently solve each question, then write ONE verdict per question using the compact format below. Never output the same question number twice.
+    return f"""You are a strict {exam_ref} examiner. For EVERY question in the paper, solve it yourself completely first, then compare with the student's answer.
 
-RULES (apply silently):
-- Solve every question yourself before judging.
-- MCQ: bare letter A/B/C/D matches that labelled option. "A" = "(A) text".
-- Accept equivalent forms: 0.5=1/2, x=3 or x = 3.
-- Unanswered + prove/show that/derive/demonstrate = proof. Unanswered other = not attempted.
+GRADING RULES — apply rigorously:
+1. SOLVE each question yourself before judging. Write the correct answer internally, then compare.
+2. MCQ only: accept bare letter A/B/C/D as equivalent to that labelled option.
+3. Numerical/integer answers: require EXACT match. Do NOT accept approximations or partial equivalence. 42 ≠ 43, 0 ≠ 1.
+4. Algebraic expressions: accept equivalent simplified forms (e.g. x=3 same as x = 3, 1/2 same as 0.5).
+5. If the student's answer is wrong — even by 1 — mark it INCORRECT. Never give benefit of the doubt on numerical answers.
+6. Unanswered questions that say "prove/show/derive/demonstrate" → 📝 Proof. All other unanswered → ⬜ Not attempted.
+7. Grade EVERY question in the paper, including ones with no student answer.
 
 EXAM PAPER:
 {paper_text}
@@ -1138,16 +1146,16 @@ EXAM PAPER:
 STUDENT ANSWERS:
 {answers_formatted}
 
-COMPACT OUTPUT FORMAT — one block per question, nothing else:
+COMPACT OUTPUT FORMAT — one line per question, nothing else:
 
-✅ **Q[n]** Correct — 1/1 | Ans: [answer] | [≤8 word feedback]
-❌ **Q[n]** Incorrect — 0/1 | Ans: [answer] | Student: [their answer] | [≤8 word feedback]
+✅ **Q[n]** Correct — 1/1 | Ans: [correct answer] | [≤8 word feedback]
+❌ **Q[n]** Incorrect — 0/1 | Correct: [correct answer] | Student gave: [their answer] | [≤8 word feedback]
 📝 **Q[n]** Proof/subjective — not auto-graded
 ⬜ **Q[n]** Not attempted — 0/1
 
 After ALL questions:
 ---
-**TOTAL SCORE: [X] / [Y]** where Y = total questions in paper (including unanswered)
+**TOTAL SCORE: [X] / [Y]** where Y = total gradeable questions in the paper
 [One sentence summary]
 
 Use LaTeX for all math. Output ONLY the compact verdict lines above."""
