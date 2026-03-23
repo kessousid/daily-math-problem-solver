@@ -1210,8 +1210,10 @@ def render_math_markdown(text, height=6000):
     Protects math from markdown mangling before passing to marked.js."""
     json_text = json.dumps(text)
     # JS regexes built as plain strings to avoid Python invalid-escape warnings
-    re_display = r"/\$\$([\s\S]*?)\$\$/g"
-    re_inline  = r"/\$([^\n\$]+?)\$/g"
+    re_display  = r"/\$\$([\s\S]*?)\$\$/g"
+    re_inline   = r"/\$([^\n\$]+?)\$/g"
+    re_bracket  = r"/\\\[([\s\S]*?)\\\]/g"
+    re_paren    = r"/\\\(([\s\S]*?)\\\)/g"
     html = (
         "<!DOCTYPE html><html><head><meta charset='utf-8'>"
         "<script src='https://cdn.jsdelivr.net/npm/marked@9/marked.min.js'></script>"
@@ -1239,6 +1241,8 @@ def render_math_markdown(text, height=6000):
         "var raw = JSON.parse(document.getElementById('d').textContent);"
         "var store = {}, n = 0;"
         "function protect(t) {"
+        f"  t = t.replace({re_bracket}, function(m) {{ var k='XX'+n+++'XX'; store[k]=m; return k; }});"
+        f"  t = t.replace({re_paren},   function(m) {{ var k='XX'+n+++'XX'; store[k]=m; return k; }});"
         f"  t = t.replace({re_display}, function(m) {{ var k='XX'+n+++'XX'; store[k]=m; return k; }});"
         f"  t = t.replace({re_inline},  function(m) {{ var k='XX'+n+++'XX'; store[k]=m; return k; }});"
         "  return t;"
@@ -1322,6 +1326,11 @@ def stream_response(client, prompt, placeholder, max_tokens=1800, image_data=Non
         with client.messages.stream(
             model="claude-haiku-4-5-20251001",
             max_tokens=max_tokens,
+            system=(
+                "IMPORTANT: For ALL mathematical expressions without exception, "
+                "use ONLY these LaTeX delimiters: $...$ for inline math and $$...$$ "
+                r"for display/block math. Never use \(...\) or \[...\] or any other delimiter style."
+            ),
             messages=[{"role": "user", "content": content}],
         ) as stream:
             for text in stream.text_stream:
