@@ -552,13 +552,21 @@ GRADE_CURRICULUM = {
         "Probability & Statistics": ["Probability Distributions","Binomial Distribution","Normal Distribution & Z-scores","Bayes' Theorem","Statistical Inference"],
     },
     # ── Indian Competitive Exams ──────────────────────────────────────────────
-    "IIT JEE": {
+    "IIT JEE Mains": {
         "Calculus": ["Limits & Continuity","Differentiation (Rules & Applications)","Indefinite Integration","Definite Integration & Properties","Differential Equations"],
         "Algebra": ["Complex Numbers & Quadratics","Sequences, Series & Progressions","Permutations & Combinations","Binomial Theorem","Matrices & Determinants"],
         "Coordinate Geometry": ["Straight Lines & Pair of Lines","Circles & Family of Circles","Parabola","Ellipse","Hyperbola"],
         "Trigonometry": ["Trigonometric Identities & Equations","Inverse Trigonometric Functions","Properties of Triangles","Heights & Distances"],
         "Vectors & 3D Geometry": ["Vector Algebra (Dot & Cross Product)","3D Lines & Planes","Direction Cosines & Ratios","Shortest Distance Between Lines"],
         "Probability & Statistics": ["Classical & Conditional Probability","Bayes' Theorem","Binomial & Poisson Distribution","Mean, Variance & Standard Deviation"],
+    },
+    "IIT JEE Advanced": {
+        "Calculus": ["Limits & Continuity (Advanced)","Differentiation & Applications","Indefinite & Definite Integration","Differential Equations","Area Under Curves"],
+        "Algebra": ["Complex Numbers","Quadratics & Higher-Degree Polynomials","Sequences & Series","Permutations & Combinations","Binomial Theorem","Matrices & Determinants"],
+        "Coordinate Geometry": ["Straight Lines & Pair of Lines","Circles","Parabola","Ellipse","Hyperbola","3D Geometry"],
+        "Trigonometry": ["Trigonometric Equations & Identities","Inverse Trigonometric Functions","Properties of Triangles"],
+        "Vectors & 3D Geometry": ["Vector Algebra","3D Lines & Planes","Direction Cosines","Shortest Distance"],
+        "Probability & Statistics": ["Probability (Classical & Conditional)","Bayes' Theorem","Probability Distributions"],
     },
     "BITSAT (BITS Pilani)": {
         "Algebra & Trigonometry": ["Quadratics & Polynomials","Sequences & Series","Permutations & Combinations","Trigonometric Identities & Equations","Inverse Trigonometry"],
@@ -595,6 +603,46 @@ GRADE_CURRICULUM = {
         "Combinatorics": ["Advanced Counting","Probability","Graph Theory","Recursion & Generating Functions"],
     },
     # ── UK ────────────────────────────────────────────────────────────────────
+    "GCSE": {
+        "Number": ["Number Properties & Calculations","Fractions, Decimals & Percentages","Ratio & Proportion","Powers & Roots","Standard Form"],
+        "Algebra": ["Expressions & Formulae","Linear Equations & Inequalities","Quadratic Equations","Sequences","Graphs of Functions"],
+        "Geometry & Measures": ["Angles & Properties of Shapes","Area & Volume","Transformations","Pythagoras & Trigonometry","Vectors"],
+        "Probability & Statistics": ["Basic Probability","Representing Data","Averages & Spread","Cumulative Frequency","Scatter Graphs"],
+    },
+    "A-Level": {
+        "Pure Mathematics": ["Algebra & Functions","Coordinate Geometry","Sequences & Series","Trigonometry","Exponentials & Logarithms","Differentiation","Integration","Numerical Methods","Vectors"],
+        "Mechanics": ["Kinematics","Forces & Newton's Laws","Moments","Projectiles","Friction"],
+        "Statistics": ["Statistical Sampling","Data Presentation","Probability","Statistical Distributions","Hypothesis Testing"],
+        "Further Pure (A2)": ["Complex Numbers","Matrices","Further Algebra","Differential Equations","Polar Coordinates","Hyperbolic Functions"],
+    },
+    "Cambridge IGCSE": {
+        "Number": ["Number & Calculation","Fractions & Percentages","Ratio, Rate & Proportion","Standard Form","Surds & Indices"],
+        "Algebra & Graphs": ["Algebraic Manipulation","Linear & Quadratic Equations","Inequalities","Functions & Graphs","Sequences"],
+        "Coordinate Geometry": ["Straight Lines","Gradient & Equation of a Line","Parallel & Perpendicular Lines"],
+        "Geometry & Trigonometry": ["Angles & Polygons","Circles & Theorems","Trigonometry (SOHCAHTOA)","Sine & Cosine Rule","Vectors"],
+        "Mensuration": ["Perimeter, Area & Volume","Arc Length & Sector Area"],
+        "Statistics & Probability": ["Statistical Diagrams","Averages","Probability (Tree & Venn Diagrams)"],
+    },
+    "Cambridge A-Level": {
+        "Pure Mathematics 1": ["Quadratics","Functions","Coordinate Geometry","Circular Measure","Trigonometry","Series","Differentiation","Integration"],
+        "Pure Mathematics 3": ["Algebra","Logarithms","Trigonometry (Advanced)","Differentiation (Implicit, Parametric)","Integration Techniques","Differential Equations","Vectors","Complex Numbers"],
+        "Statistics": ["Representation of Data","Probability","Discrete Random Variables","Normal Distribution","Hypothesis Testing","Regression & Correlation"],
+        "Mechanics": ["Velocity & Acceleration","Kinematics","Forces","Newton's Laws","Energy, Work & Power"],
+    },
+    "IB HL": {
+        "Algebra": ["Sequences & Series","Exponents & Logarithms","Binomial Theorem","Proof & Induction","Complex Numbers","Systems of Equations"],
+        "Functions": ["Function Concepts","Transformations","Rational & Inverse Functions","Polynomial Functions","Exponential & Logarithmic Functions"],
+        "Geometry & Trigonometry": ["3D Geometry","Trigonometric Functions & Identities","Vectors in 2D & 3D","Circle Theorems"],
+        "Statistics & Probability": ["Descriptive Statistics","Probability","Discrete Distributions","Continuous Distributions","Hypothesis Testing"],
+        "Calculus": ["Limits","Differentiation","Applications of Differentiation","Integration","Differential Equations"],
+    },
+    "IB SL": {
+        "Algebra": ["Sequences & Series","Exponents & Logarithms","Financial Mathematics","Binomial Theorem"],
+        "Functions": ["Function Concepts","Transformations","Quadratic & Exponential Functions","Logarithmic Functions"],
+        "Geometry & Trigonometry": ["2D Trigonometry","3D Geometry","Sine & Cosine Rules","Vectors (2D)"],
+        "Statistics & Probability": ["Descriptive Statistics","Probability","Binomial Distribution","Normal Distribution"],
+        "Calculus": ["Differentiation","Applications of Differentiation","Integration & Applications"],
+    },
     "UKMT (UK)": {
         "Number & Algebra": ["Number Properties & Divisibility","Algebraic Manipulation","Sequences & Series","Logarithms & Exponentials"],
         "Geometry": ["Euclidean Geometry","Circle Theorems","Coordinate Geometry","Trigonometry"],
@@ -990,7 +1038,9 @@ def handle_correct_answer():
 # ═════════════════════════════════════════════════════════════════════════════
 def build_problem_prompt(grade, difficulty, topic, subtopic):
     extra = ""
-    if "JEE" in grade: extra = " Use IIT JEE / JEE Advanced style."
+    if "JEE Mains" in grade: extra = " Use JEE Mains style: single-correct MCQ with options (A)–(D), moderate-to-hard difficulty."
+    elif "JEE Advanced" in grade: extra = " Use JEE Advanced style: multi-correct or integer-type question, high difficulty requiring deep reasoning."
+    elif "JEE" in grade: extra = " Use IIT JEE / JEE Advanced style."
     elif "Olympiad" in grade or "IMO" in grade: extra = " Require elegant, non-routine olympiad reasoning."
     elif "BITSAT" in grade: extra = " Use BITSAT multiple-choice style."
     elif "SAT" in grade: extra = " Use SAT-style question format."
@@ -998,6 +1048,12 @@ def build_problem_prompt(grade, difficulty, topic, subtopic):
     elif "UKMT" in grade: extra = " Use UKMT competition style."
     elif "GRE" in grade: extra = " Use GRE Quantitative Reasoning style, including quantitative comparison and data interpretation question types."
     elif "GMAT" in grade: extra = " Use GMAT Quantitative style, including problem solving and data sufficiency question types."
+    elif grade == "GCSE": extra = " Use GCSE style: structured question with parts (a), (b), mark allocations in brackets."
+    elif grade == "A-Level": extra = " Use A-Level style: multi-part structured question with show-that and hence parts where appropriate."
+    elif "Cambridge IGCSE" in grade: extra = " Use Cambridge IGCSE (0580) Extended style: structured question with clear working expected."
+    elif "Cambridge A-Level" in grade: extra = " Use Cambridge International A-Level (9709) style: multi-part structured question."
+    elif grade == "IB HL": extra = " Use IB Mathematics HL style: multi-part question, expect rigorous working and exact answers."
+    elif grade == "IB SL": extra = " Use IB Mathematics SL style: structured multi-part question with GDC allowed."
     return f"""You are an expert maths teacher. Generate ONE self-contained problem for:
 Level: {grade}{extra}  |  Topic: {topic} → {subtopic}  |  Difficulty: {difficulty}
 
@@ -1012,10 +1068,18 @@ HINT:
 
 
 def build_solution_prompt(grade, difficulty, topic, subtopic, problem):
-    extra = " JEE-style shortcuts where applicable." if "JEE" in grade else ""
+    extra = " JEE Mains-style concise solution with key steps." if "JEE Mains" in grade else ""
+    extra += " JEE Advanced-style rigorous multi-step solution." if "JEE Advanced" in grade else ""
+    extra += " JEE-style shortcuts where applicable." if "JEE" in grade and "Mains" not in grade and "Advanced" not in grade else ""
     extra += " Elegant olympiad reasoning." if "Olympiad" in grade or "IMO" in grade else ""
     extra += " GRE-style clear concise explanation." if "GRE" in grade else ""
     extra += " GMAT-style explanation including data sufficiency logic where applicable." if "GMAT" in grade else ""
+    extra += " GCSE-style answer with clear method marks and structured working." if grade == "GCSE" else ""
+    extra += " A-Level style solution showing all required steps." if grade == "A-Level" else ""
+    extra += " Cambridge IGCSE style — show all working clearly." if "Cambridge IGCSE" in grade else ""
+    extra += " Cambridge A-Level style — structured solution with method shown." if "Cambridge A-Level" in grade else ""
+    extra += " IB HL style — precise working, exact answers, reference to syllabus concepts." if grade == "IB HL" else ""
+    extra += " IB SL style — clear working, GDC answers acceptable where appropriate." if grade == "IB SL" else ""
     return f"""You are an expert maths tutor.{extra}
 Topic: {topic} → {subtopic}  |  Level: {grade}  |  Difficulty: {difficulty}
 Problem: {problem}
@@ -1807,8 +1871,13 @@ elif st.session_state.active_tab == 1:
 
     # JEE Mains vs Advanced sub-option
     jee_type = None
-    if p_grade == "IIT JEE":
-        jee_type = st.radio("📝 Paper Type", ["JEE Mains", "JEE Advanced"], horizontal=True, key="jee_type")
+    if "IIT JEE" in p_grade:
+        if "Mains" in p_grade:
+            jee_type = "JEE Mains"
+        elif "Advanced" in p_grade:
+            jee_type = "JEE Advanced"
+        else:
+            jee_type = st.radio("📝 Paper Type", ["JEE Mains", "JEE Advanced"], horizontal=True, key="jee_type")
 
     if not is_competitive:
         pc1, pc2 = st.columns([1.2, 1])
