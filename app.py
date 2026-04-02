@@ -2248,19 +2248,11 @@ elif st.session_state.active_tab == 1:
 
     # ── Daily paper limit ─────────────────────────────────────────────────────
     _current_user = st.session_state.supabase_user
-    if _current_user:
-        _limit_reached = sb_check_paper_today(_current_user["id"])
-    else:
-        _limit_reached = st.session_state.paper_generated_this_session
-
-    if _limit_reached:
-        if _current_user:
-            st.warning("✋ You've already generated your free paper for today. Come back tomorrow!", icon="📅")
-        else:
-            st.warning("✋ 1 paper per session for guests. **Sign in** to get a fresh paper each day.", icon="🔑")
+    # TODO: re-enable daily limit after testing
+    _limit_reached = False
 
     gen_paper_btn = st.button("📄 Generate Exam Paper", type="primary",
-                               disabled=paper_disabled or _limit_reached)
+                               disabled=paper_disabled)
 
     if gen_paper_btn:
         st.session_state.update(paper_solutions=None, show_paper_solutions=False, paper_answer_key=None)
