@@ -1338,6 +1338,12 @@ def parse_and_strip_answer_key(paper_text):
     return paper_text, ""
 
 
+def parse_total_marks(paper_text):
+    """Extract declared maximum marks from the paper header."""
+    m = re.search(r'(?:Maximum|Max\.?|Total)\s*Marks\s*[:\-–]?\s*(\d+)', paper_text, re.IGNORECASE)
+    return int(m.group(1)) if m else None
+
+
 def build_answer_key_prompt(paper_text, grade, board):
     """Sonnet solves the paper once and produces an authoritative answer key."""
     exam_ref = f"{board} {grade}" if board else grade
@@ -1366,31 +1372,52 @@ Output ONLY the Q[n]: answer lines. No working, no explanations."""
 
 def build_paper_grading_prompt(paper_text, answers_dict, answer_key, grade, board):
     exam_ref = f"{board} {grade}" if board else grade
+
+    # Exam-specific marking rules
+    is_jee_mains    = "JEE Mains" in grade or "JEE Mains" in (board or "")
+    is_jee_advanced = "JEE Advanced" in grade or "JEE Advanced" in (board or "")
+    if is_jee_mains:
+        marking_note = (
+            "MARKING SCHEME — JEE Mains:\n"
+            "- Section A (Q1–Q20) MCQ: Correct → +4, Wrong → -1, Unattempted → 0\n"
+            "- Section B (Q21–Q30) Numerical: Correct → +4, Wrong/Unattempted → 0\n"
+            "Use -1/4 for wrong MCQ in Section A."
+        )
+    elif is_jee_advanced:
+        marking_note = (
+            "MARKING SCHEME — JEE Advanced: apply the marks shown in brackets for each section. "
+            "Apply negative marking as specified in the paper instructions."
+        )
+    else:
+        marking_note = "Use the marks in brackets [X Marks] shown beside each question."
+
     answers_formatted = "\n".join(
         f"Q{q}: {a.strip()}" for q, a in sorted(answers_dict.items()) if a.strip()
     ) or "No answers provided."
-    return f"""You are a strict {exam_ref} examiner. You have a pre-verified answer key — do NOT re-solve anything. Your only job is to compare each student answer to the answer key.
 
-ANSWER KEY (authoritative — trust this completely):
+    return f"""You are a strict {exam_ref} examiner. You have a pre-verified answer key — do NOT re-solve anything. Compare each student answer to the answer key.
+
+ANSWER KEY (authoritative — trust completely):
 {answer_key}
 
 STUDENT ANSWERS:
 {answers_formatted}
 
-EXAM PAPER (for marks/context only — do NOT re-solve):
+EXAM PAPER (for marks/context only):
 {paper_text}
 
+{marking_note}
+
 GRADING RULES:
-1. MCQ: accept bare letter A/B/C/D as equivalent to (A)/(B)/(C)/(D).
-2. Numerical: require EXACT match. 42 ≠ 43.
-3. Algebraic: accept equivalent simplified forms (x=3 same as x = 3).
-4. No student answer + question is proof/show/derive → 📝 Proof.
-5. No student answer + all other types → ⬜ Not attempted.
-6. Output a verdict for EVERY question in the paper.
+1. MCQ: accept bare A/B/C/D as equivalent to (A)/(B)/(C)/(D).
+2. Numerical: require EXACT match.
+3. No student answer + proof/show/derive question → 📝 Proof.
+4. No student answer + all other types → ⬜ Not attempted.
+5. Output a verdict for EVERY question in the paper.
 
 OUTPUT FORMAT — one line per question:
 ✅ **Q[n]** Correct — [scored]/[max] | Ans: [correct answer] | [≤8 word feedback]
-❌ **Q[n]** Incorrect — 0/[max] | Correct: [correct answer] | Student gave: [their answer] | [≤8 word feedback]
+❌ **Q[n]** Incorrect — [scored]/[max] | Correct: [answer] | Student gave: [answer] | [≤8 word feedback]
 📝 **Q[n]** Proof/subjective — not auto-graded
 ⬜ **Q[n]** Not attempted — 0/[max]
 
@@ -1398,7 +1425,7 @@ CRITICAL: Exactly ONE line per question. Never revise. Do NOT output a TOTAL SCO
 Use LaTeX for all math."""
 
 
-def fix_grading_score(score_text):
+def fix_grading_score(score_text, total_marks=None):
     """
     Post-process Claude's raw grading output:
     1. Fix merged-line duplicates: "❌ Qn … ✅ Qn" on one line → keep ✅ part.
@@ -1447,17 +1474,24 @@ def fix_grading_score(score_text):
     )
 
     # ── 4. Compute score from the clean verdict lines
-    total_scored = total_possible = correct = attempted = 0
+    total_scored = total_possible_from_verdicts = correct = attempted = 0
     for m in VERDICT_LINE.finditer(score_text):
         line = m.group(0)
-        mk = re.search(r'[—–\-]\s*(\d+)\s*/\s*(\d+)', line)
+        # Marks pattern: handles negatives like -1/4
+        mk = re.search(r'[—–]\s*(-?\d+)\s*/\s*(\d+)', line)
+        if not mk:
+            mk = re.search(r'\s(-?\d+)\s*/\s*(\d+)', line)
         if mk:
-            total_scored   += int(mk.group(1))
-            total_possible += int(mk.group(2))
+            total_scored              += int(mk.group(1))
+            total_possible_from_verdicts += int(mk.group(2))
         if m.group(1) == '✅':
             correct += 1;  attempted += 1
         elif m.group(1) == '❌':
             attempted += 1
+
+    # Use declared exam total marks if available (e.g. 100 for JEE Mains),
+    # otherwise fall back to sum of question marks
+    total_possible = total_marks if total_marks else total_possible_from_verdicts
 
     # ── 5. Ensure blank line before every verdict line so markdown renders them
     #       as separate items, not one flowing paragraph
@@ -2399,7 +2433,8 @@ elif st.session_state.active_tab == 1:
                         max_tokens=4096,
                         model="claude-sonnet-4-6",
                     )
-                    st.session_state.paper_score = fix_grading_score(score_text)
+                    _total_marks = parse_total_marks(st.session_state.paper_text)
+                    st.session_state.paper_score = fix_grading_score(score_text, total_marks=_total_marks)
                     st.rerun()
 
         if st.session_state.paper_score:
