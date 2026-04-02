@@ -458,6 +458,58 @@ hr { border-color: rgba(255,255,255,0.08) !important; }
     border-top: 1px solid rgba(255,255,255,0.06);
     font-family: 'Space Grotesk', sans-serif;
 }
+
+/* ── Registration banner ── */
+.reg-banner-wrap {
+    overflow: hidden;
+    background: linear-gradient(90deg, #7c3aed, #db2777, #7c3aed);
+    background-size: 200% 100%;
+    animation: bannerShift 6s linear infinite;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    padding: 0.6rem 0;
+}
+@keyframes bannerShift {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+.reg-banner-track {
+    display: inline-block;
+    white-space: nowrap;
+    animation: marquee 22s linear infinite;
+}
+@keyframes marquee {
+    0%   { transform: translateX(100vw); }
+    100% { transform: translateX(-100%); }
+}
+.reg-banner-track span {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.03em;
+    padding: 0 2rem;
+}
+
+/* ── Auth gate card ── */
+.auth-gate {
+    max-width: 420px;
+    margin: 3rem auto;
+    background: rgba(139,92,246,0.08);
+    border: 1px solid rgba(139,92,246,0.25);
+    border-radius: 18px;
+    padding: 2rem 2rem 1.5rem;
+    text-align: center;
+}
+.auth-gate h3 {
+    color: #e2e8f0;
+    margin-bottom: 0.3rem;
+    font-size: 1.25rem;
+}
+.auth-gate p {
+    color: rgba(226,232,240,0.55);
+    font-size: 0.88rem;
+    margin-bottom: 1.2rem;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1897,6 +1949,19 @@ with st.sidebar:
                     else:
                         st.error(f"Could not send: {info}")
 
+# ── Registration banner (shown to guests) ─────────────────────────────────────
+if not st.session_state.supabase_user:
+    _msg = ("🎓 Registration is now required to use Maths Daily Helper &nbsp;·&nbsp; "
+            "Create your free account in seconds &nbsp;·&nbsp; "
+            "Save your streak, track your progress &nbsp;·&nbsp; "
+            "Sign in via the sidebar → &nbsp;·&nbsp; "
+            "🎓 Registration is now required to use Maths Daily Helper &nbsp;·&nbsp; "
+            "Create your free account — it's completely free!")
+    st.markdown(
+        f'<div class="reg-banner-wrap"><div class="reg-banner-track"><span>{_msg}</span></div></div>',
+        unsafe_allow_html=True,
+    )
+
 # ═════════════════════════════════════════════════════════════════════════════
 # CUSTOM TABS
 # ═════════════════════════════════════════════════════════════════════════════
@@ -1912,6 +1977,17 @@ for _i, (_col, _label) in enumerate(zip(_tcols, _tab_labels)):
                 st.session_state.show_history = False
             st.rerun()
 st.divider()
+
+# ── Auth gate — require login for all features ─────────────────────────────────
+if not st.session_state.supabase_user:
+    st.markdown("""
+    <div class="auth-gate">
+      <h3>🔐 Sign in to continue</h3>
+      <p>Maths Daily Helper now requires a free account.<br>
+         Use the <strong>Sign In / Create Account</strong> button in the sidebar to get started.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    st.stop()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ── Solved History Panel ──────────────────────────────────────────────────────
