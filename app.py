@@ -2515,4 +2515,9 @@ or upload a photo or PDF of a question you're struggling with and get an AI expl
 """, unsafe_allow_html=True)
 
 # ── Footer ────────────────────────────────────────────────────────────────────
-st.markdown('<div class="footer">built with ⚡ by mathdrop · powered by claude ai · made for the curious ones</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="footer">built with ⚡ by mathdrop · powered by claude ai · made for the curious ones'
+    ' &nbsp;·&nbsp; <a href="/?admin=true" style="color:rgba(226,232,240,0.15);text-decoration:none;">admin</a>'
+    '</div>',
+    unsafe_allow_html=True
+)
