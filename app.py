@@ -1316,42 +1316,64 @@ def detect_question_count(paper_text):
 
 
 
-def build_paper_grading_prompt(paper_text, answers_dict, grade, board):
+def build_answer_key_prompt(paper_text, grade, board):
+    """Sonnet solves the paper once and produces an authoritative answer key."""
     exam_ref = f"{board} {grade}" if board else grade
-    answers_formatted = "\n".join(
-        f"Q{q}: {a.strip()}" for q, a in sorted(answers_dict.items()) if a.strip()
-    ) or "No answers provided."
-    return f"""You are a strict {exam_ref} examiner. For EVERY question in the paper, solve it yourself completely first, then compare with the student's answer.
+    return f"""You are an expert {exam_ref} mathematician. Solve every question in this exam paper carefully and produce a clean answer key.
 
-GRADING RULES — apply rigorously:
-1. SOLVE each question yourself before judging. Write the correct answer internally, then compare.
-2. MCQ only: accept bare letter A/B/C/D as equivalent to that labelled option.
-3. Numerical/integer answers: require EXACT match. Do NOT accept approximations or partial equivalence. 42 ≠ 43, 0 ≠ 1.
-4. Algebraic expressions: accept equivalent simplified forms (e.g. x=3 same as x = 3, 1/2 same as 0.5).
-5. If the student's answer is wrong — even by 1 — mark it INCORRECT. Never give benefit of the doubt on numerical answers.
-6. Unanswered questions that say "prove/show/derive/demonstrate" → 📝 Proof. All other unanswered → ⬜ Not attempted.
-7. Grade EVERY question in the paper, including ones with no student answer.
+{LATEX_RULES}
 
 EXAM PAPER:
 {paper_text}
 
+OUTPUT FORMAT — one line per question, nothing else:
+Q1: (A)
+Q2: 42
+Q3: proof
+Q4: $x = 3$
+
+Rules:
+- MCQ: write the correct option letter in parentheses, e.g. (A) or (C).
+- Numerical/integer: write the exact number.
+- Algebraic: write the simplified final expression in LaTeX.
+- Proof/show/derive/demonstrate: write "proof".
+- Sub-parts (e.g. Q36a, Q36b): list each on its own line.
+
+Output ONLY the Q[n]: answer lines. No working, no explanations."""
+
+
+def build_paper_grading_prompt(paper_text, answers_dict, answer_key, grade, board):
+    exam_ref = f"{board} {grade}" if board else grade
+    answers_formatted = "\n".join(
+        f"Q{q}: {a.strip()}" for q, a in sorted(answers_dict.items()) if a.strip()
+    ) or "No answers provided."
+    return f"""You are a strict {exam_ref} examiner. You have a pre-verified answer key — do NOT re-solve anything. Your only job is to compare each student answer to the answer key.
+
+ANSWER KEY (authoritative — trust this completely):
+{answer_key}
+
 STUDENT ANSWERS:
 {answers_formatted}
 
-COMPACT OUTPUT FORMAT — one line per question, nothing else:
+EXAM PAPER (for marks/context only — do NOT re-solve):
+{paper_text}
 
-✅ **Q[n]** Correct — 1/1 | Ans: [correct answer] | [≤8 word feedback]
-❌ **Q[n]** Incorrect — 0/1 | Correct: [correct answer] | Student gave: [their answer] | [≤8 word feedback]
+GRADING RULES:
+1. MCQ: accept bare letter A/B/C/D as equivalent to (A)/(B)/(C)/(D).
+2. Numerical: require EXACT match. 42 ≠ 43.
+3. Algebraic: accept equivalent simplified forms (x=3 same as x = 3).
+4. No student answer + question is proof/show/derive → 📝 Proof.
+5. No student answer + all other types → ⬜ Not attempted.
+6. Output a verdict for EVERY question in the paper.
+
+OUTPUT FORMAT — one line per question:
+✅ **Q[n]** Correct — [scored]/[max] | Ans: [correct answer] | [≤8 word feedback]
+❌ **Q[n]** Incorrect — 0/[max] | Correct: [correct answer] | Student gave: [their answer] | [≤8 word feedback]
 📝 **Q[n]** Proof/subjective — not auto-graded
-⬜ **Q[n]** Not attempted — 0/1
+⬜ **Q[n]** Not attempted — 0/[max]
 
-CRITICAL OUTPUT RULES:
-- Output EXACTLY ONE verdict line per question — never revise or re-check after writing it.
-- Think through your answer silently BEFORE writing any verdict. Once written, move to the next question.
-- Never write "Wait", "Rechecking", or any revision. Your first written verdict is final.
-- Do NOT output a TOTAL SCORE line — the app computes it automatically.
-
-Use LaTeX for all math. Output ONLY the compact verdict lines above — nothing else after the last question."""
+CRITICAL: Exactly ONE line per question. Never revise. Do NOT output a TOTAL SCORE.
+Use LaTeX for all math."""
 
 
 def fix_grading_score(score_text):
@@ -1579,7 +1601,7 @@ def render_math_box(text, box_type="info", height=None):
     components.html(html, height=estimated_h, scrolling=True)
 
 
-def stream_response(client, prompt, placeholder, max_tokens=1800, image_data=None, media_type=None):
+def stream_response(client, prompt, placeholder, max_tokens=1800, image_data=None, media_type=None, model="claude-haiku-4-5-20251001"):
     content = []
     if image_data:
         content.append({"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}})
@@ -1587,7 +1609,7 @@ def stream_response(client, prompt, placeholder, max_tokens=1800, image_data=Non
     full_text = ""
     try:
         with client.messages.stream(
-            model="claude-haiku-4-5-20251001",
+            model=model,
             max_tokens=max_tokens,
             system=(
                 "IMPORTANT: For ALL mathematical expressions without exception, "
@@ -1634,7 +1656,7 @@ def extract_pdf_text(pdf_bytes):
 for k, v in {
     "problem_data": None, "solution": None,
     "show_hint": False, "show_solution": False, "problem_count": 0,
-    "paper_text": None, "paper_solutions": None, "show_paper_solutions": False, "paper_meta": None,
+    "paper_text": None, "paper_solutions": None, "show_paper_solutions": False, "paper_meta": None, "paper_answer_key": None,
     "doubt_response": None, "active_tab": 0,
     # answer verification
     "answer_result": None, "answer_feedback": "",
@@ -2241,7 +2263,7 @@ elif st.session_state.active_tab == 1:
                                disabled=paper_disabled or _limit_reached)
 
     if gen_paper_btn:
-        st.session_state.update(paper_solutions=None, show_paper_solutions=False)
+        st.session_state.update(paper_solutions=None, show_paper_solutions=False, paper_answer_key=None)
         client = get_client()
 
         st.info("⏳ Generating your paper — this may take up to 30 seconds…", icon="🔄")
@@ -2250,6 +2272,22 @@ elif st.session_state.active_tab == 1:
 
         st.session_state.paper_text = paper
         st.session_state.paper_meta = {"grade": p_grade, "board": p_board, "year": p_year, "jee_type": jee_type}
+
+        # Generate authoritative answer key using Sonnet (stored, never shown to student)
+        with st.spinner("🔑 Preparing answer key…"):
+            try:
+                _key_resp = client.messages.create(
+                    model="claude-sonnet-4-6",
+                    max_tokens=2048,
+                    system=(
+                        "IMPORTANT: For ALL mathematical expressions use ONLY $...$ for inline "
+                        r"and $$...$$ for display math. Never use \(...\) or \[...\]."
+                    ),
+                    messages=[{"role": "user", "content": build_answer_key_prompt(paper, p_grade, p_board)}],
+                )
+                st.session_state.paper_answer_key = _key_resp.content[0].text
+            except Exception:
+                st.session_state.paper_answer_key = ""  # fall back to grading without key
 
         # Log usage and mark limit
         _uid   = _current_user["id"]    if _current_user else None
@@ -2339,13 +2377,17 @@ elif st.session_state.active_tab == 1:
                     client = get_client()
                     st.info(f"⏳ Grading {_filled} answer(s)…", icon="🔄")
                     ph = st.empty()
+                    _answer_key = st.session_state.get("paper_answer_key") or ""
                     score_text = stream_response(
                         client,
                         build_paper_grading_prompt(
                             st.session_state.paper_text, _answers,
+                            _answer_key,
                             meta.get("grade", ""), meta.get("board", "")
                         ),
-                        ph, max_tokens=8192
+                        ph,
+                        max_tokens=4096,
+                        model="claude-sonnet-4-6",
                     )
                     st.session_state.paper_score = fix_grading_score(score_text)
                     st.rerun()
@@ -2371,7 +2413,8 @@ elif st.session_state.active_tab == 1:
         with cs2:
             if st.button("🔄 Generate New Paper", use_container_width=True):
                 st.session_state.update(paper_text=None, paper_solutions=None,
-                                        show_paper_solutions=False, paper_score=None)
+                                        show_paper_solutions=False, paper_score=None,
+                                        paper_answer_key=None)
                 for _qi in range(1, 41):
                     st.session_state.pop(f"paper_ans_{_qi}", None)
                 st.rerun()
