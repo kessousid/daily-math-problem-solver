@@ -989,6 +989,70 @@ def sb_sign_in(email, password):
     except Exception as e:
         return None, str(e)
 
+def get_supabase_admin():
+    """Admin Supabase client using service role key — bypasses RLS for admin queries."""
+    if not SUPABASE_OK:
+        return None
+    url = os.environ.get("SUPABASE_URL", "")
+    key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    if not url or not key:
+        return None
+    try:
+        return create_client(url, key)
+    except Exception:
+        return None
+
+def sb_log_paper(user_id, user_email, grade, board):
+    """Log a paper generation event to paper_usage table."""
+    sb = get_supabase()
+    if not sb:
+        return
+    try:
+        sb.table("paper_usage").insert({
+            "user_id":    user_id,
+            "user_email": user_email or "anonymous",
+            "grade":      grade or "",
+            "board":      board or "",
+        }).execute()
+    except Exception:
+        pass
+
+def sb_check_paper_today(user_id):
+    """Return True if this logged-in user has already generated a paper today."""
+    if not user_id:
+        return False
+    sb = get_supabase()
+    if not sb:
+        return False
+    try:
+        today = _date.today().isoformat()
+        r = (sb.table("paper_usage")
+               .select("id")
+               .eq("user_id", user_id)
+               .gte("created_at", today)
+               .execute())
+        return len(r.data or []) > 0
+    except Exception:
+        return False
+
+def sb_get_admin_stats():
+    """Fetch all usage data for the admin dashboard (uses service role key)."""
+    sb = get_supabase_admin()
+    if not sb:
+        return None
+    try:
+        papers_r = (sb.table("paper_usage")
+                      .select("*")
+                      .order("created_at", desc=True)
+                      .execute())
+        users_r  = sb.table("user_stats").select("id").execute()
+        return {
+            "papers":      papers_r.data or [],
+            "total_users": len(users_r.data or []),
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 def handle_correct_answer():
     """Increment solved count and update streak, then sync to Supabase."""
     today = _date.today()
@@ -1516,6 +1580,10 @@ for k, v in {
     "paper_score": None,
     # solved history (current session)
     "solved_history": [], "show_history": False,
+    # paper daily-limit tracking
+    "paper_generated_this_session": False,
+    # admin auth
+    "admin_authenticated": False,
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -1528,6 +1596,82 @@ if st.session_state.supabase_user and st.session_state.problem_count == 0:
         st.session_state.streak           = _stats.get("streak", 0)
         _ld = _stats.get("last_solved_date")
         st.session_state.last_solved_date = _date.fromisoformat(_ld) if _ld else None
+
+# ═════════════════════════════════════════════════════════════════════════════
+# ADMIN DASHBOARD  (accessed via ?admin=true in the URL)
+# ═════════════════════════════════════════════════════════════════════════════
+_qp = st.query_params
+if _qp.get("admin") == "true":
+    _admin_pwd_env = (
+        os.environ.get("ADMIN_PASSWORD")
+        or (st.secrets.get("ADMIN_PASSWORD") if hasattr(st, "secrets") else "")
+        or ""
+    )
+    st.title("🔐 Maths Daily Helper — Admin")
+
+    if not st.session_state.admin_authenticated:
+        _pwd = st.text_input("Admin password", type="password")
+        if st.button("Login", type="primary"):
+            if _pwd and _pwd == _admin_pwd_env:
+                st.session_state.admin_authenticated = True
+                st.rerun()
+            else:
+                st.error("Incorrect password.")
+        st.stop()
+
+    # ── Authenticated admin view ──────────────────────────────────────────────
+    if st.button("🚪 Sign Out of Admin"):
+        st.session_state.admin_authenticated = False
+        st.rerun()
+
+    _stats = sb_get_admin_stats()
+    if _stats is None:
+        st.error("SUPABASE_SERVICE_KEY not configured. Add it to Railway env vars.")
+    elif "error" in _stats:
+        st.error(f"Supabase error: {_stats['error']}")
+    else:
+        _papers = _stats["papers"]
+        _today  = _date.today().isoformat()
+        _papers_today = [p for p in _papers if (p.get("created_at") or "")[:10] == _today]
+
+        # ── Top metrics ──────────────────────────────────────────────────────
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("👥 Registered Users", _stats["total_users"])
+        c2.metric("📄 Total Papers Generated", len(_papers))
+        c3.metric("📅 Papers Today", len(_papers_today))
+        _unique_users = len({p["user_email"] for p in _papers if p.get("user_email") and p["user_email"] != "anonymous"})
+        c4.metric("🧑‍🎓 Unique Generating Users", _unique_users)
+
+        st.divider()
+
+        # ── Papers by grade ──────────────────────────────────────────────────
+        if _papers:
+            from collections import Counter
+            _grade_counts = Counter(p.get("grade", "Unknown") for p in _papers)
+            st.subheader("📊 Papers by Grade / Exam")
+            _gc_sorted = sorted(_grade_counts.items(), key=lambda x: -x[1])
+            _gc_labels = [g for g, _ in _gc_sorted]
+            _gc_vals   = [v for _, v in _gc_sorted]
+            st.bar_chart(dict(zip(_gc_labels, _gc_vals)))
+
+        st.divider()
+
+        # ── Recent paper log ─────────────────────────────────────────────────
+        st.subheader("📋 Recent Paper Generations")
+        if _papers:
+            _rows = []
+            for p in _papers[:200]:
+                _rows.append({
+                    "Email":      p.get("user_email", "—"),
+                    "Grade/Exam": p.get("grade", "—"),
+                    "Board":      p.get("board", "—"),
+                    "Generated":  (p.get("created_at") or "")[:16].replace("T", " "),
+                })
+            st.dataframe(_rows, use_container_width=True)
+        else:
+            st.info("No papers generated yet.")
+
+    st.stop()  # Do not render the rest of the app for admin view
 
 # ═════════════════════════════════════════════════════════════════════════════
 # HEADER
@@ -1972,7 +2116,21 @@ elif st.session_state.active_tab == 1:
     else:
         paper_disabled = False
 
-    gen_paper_btn = st.button("📄 Generate Exam Paper", type="primary", disabled=paper_disabled)
+    # ── Daily paper limit ─────────────────────────────────────────────────────
+    _current_user = st.session_state.supabase_user
+    if _current_user:
+        _limit_reached = sb_check_paper_today(_current_user["id"])
+    else:
+        _limit_reached = st.session_state.paper_generated_this_session
+
+    if _limit_reached:
+        if _current_user:
+            st.warning("✋ You've already generated your free paper for today. Come back tomorrow!", icon="📅")
+        else:
+            st.warning("✋ 1 paper per session for guests. **Sign in** to get a fresh paper each day.", icon="🔑")
+
+    gen_paper_btn = st.button("📄 Generate Exam Paper", type="primary",
+                               disabled=paper_disabled or _limit_reached)
 
     if gen_paper_btn:
         st.session_state.update(paper_solutions=None, show_paper_solutions=False)
@@ -1984,6 +2142,14 @@ elif st.session_state.active_tab == 1:
 
         st.session_state.paper_text = paper
         st.session_state.paper_meta = {"grade": p_grade, "board": p_board, "year": p_year, "jee_type": jee_type}
+
+        # Log usage and mark limit
+        _uid   = _current_user["id"]    if _current_user else None
+        _email = _current_user["email"] if _current_user else None
+        sb_log_paper(_uid, _email, p_grade, p_board)
+        if not _current_user:
+            st.session_state.paper_generated_this_session = True
+
         st.rerun()
 
     if st.session_state.paper_text:
