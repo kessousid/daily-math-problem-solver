@@ -1360,79 +1360,64 @@ Use LaTeX for all math. Output ONLY the compact verdict lines above."""
 
 def fix_grading_score(score_text):
     """
-    Post-process Claude's grading output to fix:
-    1. Two verdicts for same question on separate lines — keep the LAST.
-    2. Two verdicts merged on ONE line (e.g. "❌ Q2 ... ✅ Q2 ...") — split then keep last.
-    3. Wrong TOTAL SCORE / summary — recompute programmatically.
-    4. Flexible matching: handles with/without ** bold, em-dash/hyphen/en-dash.
+    Minimal, non-destructive post-processing of Claude's grading output.
+    Never removes blank lines or restructures the text — only:
+    1. Merged-line duplicates: "❌ Qn … ✅ Qn" on one line → keep ✅ part.
+    2. Separate-line duplicates: multiple lines for same Q → keep the last.
+    3. Recomputes TOTAL SCORE / summary in-place with correct numbers.
     """
-    # ── Step 1: split any line that has a verdict marker appearing mid-line
-    # Insert a newline before each verdict emoji that is NOT at the start of a line
-    processed = re.sub(
-        r'(?<!\n)([✅❌📝⬜])(\s+\*{0,2}Q\d+)',
-        r'\n\1\2',
+    # ── 1. Merged-line fix: ❌/📝/⬜ Qn … ✅ Qn all on one line → keep ✅ part
+    score_text = re.sub(
+        r'[❌📝⬜][ \t]+\*{0,2}Q(\d+)\*{0,2}[^✅❌📝⬜\n]*'
+        r'✅([ \t]+\*{0,2}Q\1\*{0,2}[^\n]*)',
+        r'✅\2',
         score_text,
     )
 
-    lines = processed.splitlines()
-    verdict_lines = {}   # q_num -> line text (last occurrence wins)
-    other_lines = []
-    in_footer = False
+    # ── 2. Separate-line duplicates: keep the LAST verdict line per Q number
+    VERDICT_LINE = re.compile(
+        r'^([✅❌📝⬜])[ \t]+\*{0,2}Q(\d+)\*{0,2}[^\n]*$',
+        re.MULTILINE,
+    )
+    seen = {}
+    to_remove = []
+    for m in VERDICT_LINE.finditer(score_text):
+        q = m.group(2)
+        if q in seen:
+            to_remove.append(seen[q])   # earlier occurrence superseded
+        seen[q] = m
 
-    for line in lines:
-        if not line.strip():
-            continue
-        if line.strip() == "---":
-            in_footer = True
-            other_lines.append(line)
-            continue
-        if in_footer:
-            other_lines.append(line)
-            continue
+    for m in sorted(to_remove, key=lambda x: x.start(), reverse=True):
+        end = m.end() + (1 if m.end() < len(score_text) and score_text[m.end()] == '\n' else 0)
+        score_text = score_text[:m.start()] + score_text[end:]
 
-        # Match verdict lines with or without ** bold markers
-        m = re.match(r'^([✅❌📝⬜])\s+\*{0,2}Q(\d+)\*{0,2}', line)
-        if m:
-            q_num = int(m.group(2))
-            verdict_lines[q_num] = line  # last occurrence wins
-        else:
-            other_lines.append(line)
-
-    deduped_verdicts = [verdict_lines[q] for q in sorted(verdict_lines)]
-
-    # ── Step 2: recompute marks — accept em-dash (—), en-dash (–), or hyphen (-)
-    total_scored = 0
-    total_possible = 0
-    correct_count = 0
-    attempted = 0
-    for line in deduped_verdicts:
-        mark_match = re.search(r'[—–\-]\s*(\d+)\s*/\s*(\d+)', line)
-        if mark_match:
-            total_scored  += int(mark_match.group(1))
-            total_possible += int(mark_match.group(2))
-        if line.startswith("✅"):
-            correct_count += 1
-            attempted += 1
-        elif line.startswith("❌"):
+    # ── 3. Recompute totals from the now-clean verdict lines
+    total_scored = total_possible = correct = attempted = 0
+    for m in VERDICT_LINE.finditer(score_text):
+        line = m.group(0)
+        mk = re.search(r'[—–\-]\s*(\d+)\s*/\s*(\d+)', line)
+        if mk:
+            total_scored   += int(mk.group(1))
+            total_possible += int(mk.group(2))
+        if m.group(1) == '✅':
+            correct += 1;  attempted += 1
+        elif m.group(1) == '❌':
             attempted += 1
 
-    # ── Step 3: rebuild footer with correct numbers
-    new_footer = []
-    skip_next_summary = False
-    for line in other_lines:
-        if re.match(r'^\*{0,2}TOTAL SCORE:', line):
-            new_footer.append(f"**TOTAL SCORE: {total_scored} / {total_possible}**")
-            skip_next_summary = True
-        elif skip_next_summary and line.strip() and not line.startswith("---"):
-            new_footer.append(
-                f"Student attempted {attempted} question(s) with {correct_count} correct"
-                f" (scored {total_scored} out of {total_possible} marks)."
-            )
-            skip_next_summary = False
-        else:
-            new_footer.append(line)
+    # ── 4. Replace TOTAL SCORE line + following summary line in-place
+    new_total = (
+        f"**TOTAL SCORE: {total_scored} / {total_possible}**\n"
+        f"Student attempted {attempted} question(s) with {correct} correct"
+        f" (scored {total_scored} out of {total_possible} marks)."
+    )
+    score_text = re.sub(
+        r'\*{0,2}TOTAL SCORE:[^\n]*(?:\n(?![✅❌📝⬜\n\*])[^\n]*)?',
+        new_total,
+        score_text,
+        count=1,
+    )
 
-    return "\n".join(deduped_verdicts + new_footer)
+    return score_text
 
 
 def build_paper_solutions_prompt(paper_text, grade, board):
