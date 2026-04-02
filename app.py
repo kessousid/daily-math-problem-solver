@@ -1296,7 +1296,15 @@ Topics: {topics_note}
 {LATEX_RULES}
 
 {include_note}
-Do NOT include answers. Use LaTeX for all math. Output clean markdown."""
+Do NOT include answers inside the paper. Use LaTeX for all math. Output clean markdown.
+
+After the complete paper, output this exact block (on new lines, no extra text around it):
+##ANSWER_KEY_START##
+Q1: (A)
+Q2: (B)
+Q3: 42
+(one line per question — MCQ: letter in parentheses e.g. (A); numerical: the number; proof/show/derive: write proof)
+##ANSWER_KEY_END##"""
 
 
 
@@ -1314,6 +1322,20 @@ def detect_question_count(paper_text):
     return 45  # fallback
 
 
+
+
+def parse_and_strip_answer_key(paper_text):
+    """Extract ##ANSWER_KEY_START## … ##ANSWER_KEY_END## block from paper.
+    Returns (clean_paper, answer_key_text)."""
+    m = re.search(
+        r'##ANSWER_KEY_START##\s*(.*?)\s*##ANSWER_KEY_END##',
+        paper_text, re.DOTALL | re.IGNORECASE,
+    )
+    if m:
+        answer_key = m.group(1).strip()
+        clean_paper = paper_text[:m.start()].rstrip()
+        return clean_paper, answer_key
+    return paper_text, ""
 
 
 def build_answer_key_prompt(paper_text, grade, board):
@@ -1437,11 +1459,20 @@ def fix_grading_score(score_text):
         elif m.group(1) == '❌':
             attempted += 1
 
+    # ── 5. Ensure blank line before every verdict line so markdown renders them
+    #       as separate items, not one flowing paragraph
+    score_text = re.sub(
+        r'([^\n])\n([✅❌📝⬜])',
+        r'\1\n\n\2',
+        score_text,
+    )
+
     score_text = score_text.rstrip()
     score_text += (
-        f"\n\n---\n**TOTAL SCORE: {total_scored} / {total_possible}**\n"
-        f"Student attempted {attempted} question(s) with {correct} correct"
-        f" (scored {total_scored} out of {total_possible} marks)."
+        f"\n\n---\n**TOTAL SCORE: {total_scored} / {total_possible}**\n\n"
+        f"Student attempted **{attempted}** question(s) — "
+        f"**{correct} correct** / {attempted - correct} incorrect "
+        f"(scored **{total_scored}** out of **{total_possible}** marks)."
     )
     return score_text
 
@@ -2262,24 +2293,11 @@ elif st.session_state.active_tab == 1:
         ph = st.empty()
         paper = stream_response(client, build_paper_prompt(p_grade, p_board, p_year, topics_note, jee_type), ph, max_tokens=8192)
 
-        st.session_state.paper_text = paper
+        # Parse and strip the embedded answer key (never shown to student)
+        paper_clean, answer_key = parse_and_strip_answer_key(paper)
+        st.session_state.paper_text = paper_clean
+        st.session_state.paper_answer_key = answer_key
         st.session_state.paper_meta = {"grade": p_grade, "board": p_board, "year": p_year, "jee_type": jee_type}
-
-        # Generate authoritative answer key using Sonnet (stored, never shown to student)
-        with st.spinner("🔑 Preparing answer key…"):
-            try:
-                _key_resp = client.messages.create(
-                    model="claude-sonnet-4-6",
-                    max_tokens=2048,
-                    system=(
-                        "IMPORTANT: For ALL mathematical expressions use ONLY $...$ for inline "
-                        r"and $$...$$ for display math. Never use \(...\) or \[...\]."
-                    ),
-                    messages=[{"role": "user", "content": build_answer_key_prompt(paper, p_grade, p_board)}],
-                )
-                st.session_state.paper_answer_key = _key_resp.content[0].text
-            except Exception:
-                st.session_state.paper_answer_key = ""  # fall back to grading without key
 
         # Log usage and mark limit
         _uid   = _current_user["id"]    if _current_user else None
