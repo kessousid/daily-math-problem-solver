@@ -1045,10 +1045,22 @@ def sb_get_admin_stats():
                       .select("*")
                       .order("created_at", desc=True)
                       .execute())
-        users_r  = sb.table("user_stats").select("id").execute()
+        # auth.users is only accessible via the admin REST endpoint
+        import json as _json
+        import urllib.request as _urllib
+        url  = os.environ.get("SUPABASE_URL", "").rstrip("/")
+        skey = os.environ.get("SUPABASE_SERVICE_KEY", "")
+        req  = _urllib.Request(
+            f"{url}/auth/v1/admin/users?per_page=1000",
+            headers={"apikey": skey, "Authorization": f"Bearer {skey}"},
+        )
+        with _urllib.urlopen(req) as resp:
+            auth_data = _json.loads(resp.read())
+        auth_users = auth_data.get("users", [])
         return {
             "papers":      papers_r.data or [],
-            "total_users": len(users_r.data or []),
+            "total_users": len(auth_users),
+            "users":       auth_users,
         }
     except Exception as e:
         return {"error": str(e)}
@@ -1653,6 +1665,24 @@ if _qp.get("admin") == "true":
             _gc_labels = [g for g, _ in _gc_sorted]
             _gc_vals   = [v for _, v in _gc_sorted]
             st.bar_chart(dict(zip(_gc_labels, _gc_vals)))
+
+        st.divider()
+
+        # ── Registered users ─────────────────────────────────────────────────
+        st.subheader("👥 Registered Users")
+        _users = _stats.get("users", [])
+        if _users:
+            _user_rows = []
+            for u in _users:
+                _user_rows.append({
+                    "Email":           u.get("email", "—"),
+                    "Signed Up":       (u.get("created_at") or "")[:16].replace("T", " "),
+                    "Last Sign In":    (u.get("last_sign_in_at") or "—")[:16].replace("T", " "),
+                    "Email Confirmed": "Yes" if u.get("email_confirmed_at") else "No",
+                })
+            st.dataframe(_user_rows, use_container_width=True)
+        else:
+            st.info("No registered users yet.")
 
         st.divider()
 
