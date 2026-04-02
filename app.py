@@ -1372,25 +1372,6 @@ Output ONLY the Q[n]: answer lines. No working, no explanations."""
 
 def build_paper_grading_prompt(paper_text, answers_dict, answer_key, grade, board):
     exam_ref = f"{board} {grade}" if board else grade
-
-    # Exam-specific marking rules
-    is_jee_mains    = "JEE Mains" in grade or "JEE Mains" in (board or "")
-    is_jee_advanced = "JEE Advanced" in grade or "JEE Advanced" in (board or "")
-    if is_jee_mains:
-        marking_note = (
-            "MARKING SCHEME — JEE Mains:\n"
-            "- Section A (Q1–Q20) MCQ: Correct → +4, Wrong → -1, Unattempted → 0\n"
-            "- Section B (Q21–Q30) Numerical: Correct → +4, Wrong/Unattempted → 0\n"
-            "Use -1/4 for wrong MCQ in Section A."
-        )
-    elif is_jee_advanced:
-        marking_note = (
-            "MARKING SCHEME — JEE Advanced: apply the marks shown in brackets for each section. "
-            "Apply negative marking as specified in the paper instructions."
-        )
-    else:
-        marking_note = "Use the marks in brackets [X Marks] shown beside each question."
-
     answers_formatted = "\n".join(
         f"Q{q}: {a.strip()}" for q, a in sorted(answers_dict.items()) if a.strip()
     ) or "No answers provided."
@@ -1406,7 +1387,11 @@ STUDENT ANSWERS:
 EXAM PAPER (for marks/context only):
 {paper_text}
 
-{marking_note}
+MARKING SCHEME: Read the marking instructions from the paper header/instructions above and apply them exactly.
+- If the paper specifies negative marking (e.g. -1 for wrong MCQ), apply it: wrong answer scores negative marks.
+- If the paper specifies partial marking, apply it.
+- If no special scheme is stated, correct = full marks, wrong/unattempted = 0.
+- Use the marks shown in brackets [X Marks] beside each question for [max].
 
 GRADING RULES:
 1. MCQ: accept bare A/B/C/D as equivalent to (A)/(B)/(C)/(D).
