@@ -1344,6 +1344,75 @@ def parse_total_marks(paper_text):
     return int(m.group(1)) if m else None
 
 
+def _norm_answer(ans):
+    """Normalise an answer string for comparison: strip spaces, parens, dots; uppercase."""
+    return re.sub(r'[\s().*/]', '', ans).upper()
+
+
+def grade_with_answer_key(paper_text, answers_dict, answer_key_text):
+    """
+    Grade entirely in Python using the embedded answer key.
+    No AI involved — zero revision risk.
+    Returns verdict text in the same format as the grading prompt expects,
+    or None if the answer key is empty/unparseable.
+    """
+    # ── Parse answer key: "Q1: (A)", "Q2: 42", "Q3: proof"
+    key = {}
+    for m in re.finditer(r'Q(\d+)\s*:\s*([^\n]+)', answer_key_text or ""):
+        key[int(m.group(1))] = m.group(2).strip()
+
+    if not key:
+        return None  # No key — fall back to Claude
+
+    # ── Parse marks per question from paper: "[4 Marks]", "[1 mark]", etc.
+    q_marks = {}
+    for m in re.finditer(
+        r'\bQ\.?\s*(\d+)\b[^\n]{0,80}\[(\d+)\s*[Mm]arks?\]',
+        paper_text, re.IGNORECASE
+    ):
+        q_marks[int(m.group(1))] = int(m.group(2))
+
+    # Fallback: single marks value mentioned once ("each question carries 4 marks")
+    fallback_marks = 1
+    fm = re.search(r'each\s+(?:question|carries?)\s+(\d+)\s*[Mm]arks?', paper_text, re.IGNORECASE)
+    if fm:
+        fallback_marks = int(fm.group(1))
+    elif q_marks:
+        fallback_marks = max(set(q_marks.values()), key=list(q_marks.values()).count)
+
+    # ── Detect negative marking from paper text (generic)
+    neg_mark = 0
+    if re.search(r'[−\-]\s*1\s*(?:mark|marks|for\s+(?:wrong|incorrect))', paper_text, re.IGNORECASE) or \
+       re.search(r'(?:wrong|incorrect)[^\n]{0,40}[−\-]\s*1', paper_text, re.IGNORECASE) or \
+       re.search(r'\+\s*4\s*[,/]\s*[−\-]\s*1', paper_text):
+        neg_mark = -1
+
+    total_q = max(key.keys())
+    lines = []
+
+    for q in range(1, total_q + 1):
+        correct_raw = key.get(q, "")
+        student_raw = answers_dict.get(q, "").strip()
+        marks       = q_marks.get(q, fallback_marks)
+        correct_norm = _norm_answer(correct_raw)
+        student_norm = _norm_answer(student_raw)
+
+        if correct_raw.lower().strip() in ("proof", "prove", "show", "derive"):
+            lines.append(f"📝 **Q{q}** Proof/subjective — not auto-graded")
+        elif not student_raw:
+            lines.append(f"⬜ **Q{q}** Not attempted — 0/{marks}")
+        elif correct_norm == student_norm:
+            lines.append(f"✅ **Q{q}** Correct — {marks}/{marks} | Ans: {correct_raw}")
+        else:
+            scored = neg_mark if neg_mark else 0
+            lines.append(
+                f"❌ **Q{q}** Incorrect — {scored}/{marks} | "
+                f"Correct: {correct_raw} | Student gave: {student_raw}"
+            )
+
+    return "\n\n".join(lines)
+
+
 def build_answer_key_prompt(paper_text, grade, board):
     """Sonnet solves the paper once and produces an authoritative answer key."""
     exam_ref = f"{board} {grade}" if board else grade
@@ -2403,22 +2472,31 @@ elif st.session_state.active_tab == 1:
                     st.warning("Please enter at least one answer before submitting.", icon="✏️")
                 else:
                     st.session_state.paper_score = None
-                    client = get_client()
-                    st.info(f"⏳ Grading {_filled} answer(s)…", icon="🔄")
-                    ph = st.empty()
-                    _answer_key = st.session_state.get("paper_answer_key") or ""
-                    score_text = stream_response(
-                        client,
-                        build_paper_grading_prompt(
-                            st.session_state.paper_text, _answers,
-                            _answer_key,
-                            meta.get("grade", ""), meta.get("board", "")
-                        ),
-                        ph,
-                        max_tokens=4096,
-                        model="claude-sonnet-4-6",
-                    )
+                    _answer_key  = st.session_state.get("paper_answer_key") or ""
                     _total_marks = parse_total_marks(st.session_state.paper_text)
+
+                    # ── Try pure-Python grading first (no AI, no revisions)
+                    score_text = grade_with_answer_key(
+                        st.session_state.paper_text, _answers, _answer_key
+                    )
+
+                    if score_text is None:
+                        # Answer key missing — fall back to Claude
+                        client = get_client()
+                        st.info(f"⏳ Grading {_filled} answer(s)…", icon="🔄")
+                        ph = st.empty()
+                        score_text = stream_response(
+                            client,
+                            build_paper_grading_prompt(
+                                st.session_state.paper_text, _answers,
+                                _answer_key,
+                                meta.get("grade", ""), meta.get("board", "")
+                            ),
+                            ph,
+                            max_tokens=4096,
+                            model="claude-sonnet-4-6",
+                        )
+
                     st.session_state.paper_score = fix_grading_score(score_text, total_marks=_total_marks)
                     st.rerun()
 
