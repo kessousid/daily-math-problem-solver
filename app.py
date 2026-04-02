@@ -1345,28 +1345,29 @@ COMPACT OUTPUT FORMAT — one line per question, nothing else:
 📝 **Q[n]** Proof/subjective — not auto-graded
 ⬜ **Q[n]** Not attempted — 0/1
 
-After ALL questions:
----
-**TOTAL SCORE: [X] / [Y]** where Y = total gradeable questions in the paper
-[One sentence summary]
-
 CRITICAL OUTPUT RULES:
 - Output EXACTLY ONE verdict line per question — never revise or re-check after writing it.
 - Think through your answer silently BEFORE writing any verdict. Once written, move to the next question.
 - Never write "Wait", "Rechecking", or any revision. Your first written verdict is final.
+- Do NOT output a TOTAL SCORE line — the app computes it automatically.
 
-Use LaTeX for all math. Output ONLY the compact verdict lines above."""
+Use LaTeX for all math. Output ONLY the compact verdict lines above — nothing else after the last question."""
 
 
 def fix_grading_score(score_text):
     """
-    Minimal, non-destructive post-processing of Claude's grading output.
-    Never removes blank lines or restructures the text — only:
-    1. Merged-line duplicates: "❌ Qn … ✅ Qn" on one line → keep ✅ part.
-    2. Separate-line duplicates: multiple lines for same Q → keep the last.
-    3. Recomputes TOTAL SCORE / summary in-place with correct numbers.
+    Post-process Claude's raw grading output:
+    1. Fix merged-line duplicates: "❌ Qn … ✅ Qn" on one line → keep ✅ part.
+    2. Fix separate-line duplicates: keep the LAST verdict per question.
+    3. Strip any TOTAL SCORE Claude may have written anyway.
+    4. Compute and append the correct score entirely in Python.
     """
-    # ── 1. Merged-line fix: ❌/📝/⬜ Qn … ✅ Qn all on one line → keep ✅ part
+    VERDICT_LINE = re.compile(
+        r'^([✅❌📝⬜])[ \t]+\*{0,2}Q(\d+)\*{0,2}[^\n]*$',
+        re.MULTILINE,
+    )
+
+    # ── 1. Merged-line: ❌/📝/⬜ Qn … ✅ Qn on same line → keep ✅ part only
     score_text = re.sub(
         r'[❌📝⬜][ \t]+\*{0,2}Q(\d+)\*{0,2}[^✅❌📝⬜\n]*'
         r'✅([ \t]+\*{0,2}Q\1\*{0,2}[^\n]*)',
@@ -1374,24 +1375,34 @@ def fix_grading_score(score_text):
         score_text,
     )
 
-    # ── 2. Separate-line duplicates: keep the LAST verdict line per Q number
-    VERDICT_LINE = re.compile(
-        r'^([✅❌📝⬜])[ \t]+\*{0,2}Q(\d+)\*{0,2}[^\n]*$',
-        re.MULTILINE,
-    )
+    # ── 2. Separate-line duplicates: delete earlier occurrences, keep last
     seen = {}
     to_remove = []
     for m in VERDICT_LINE.finditer(score_text):
         q = m.group(2)
         if q in seen:
-            to_remove.append(seen[q])   # earlier occurrence superseded
+            to_remove.append(seen[q])
         seen[q] = m
 
     for m in sorted(to_remove, key=lambda x: x.start(), reverse=True):
         end = m.end() + (1 if m.end() < len(score_text) and score_text[m.end()] == '\n' else 0)
         score_text = score_text[:m.start()] + score_text[end:]
 
-    # ── 3. Recompute totals from the now-clean verdict lines
+    # ── 3. Strip any TOTAL SCORE block Claude wrote (we replace it below)
+    score_text = re.sub(
+        r'\n*-{3,}\n\*{0,2}TOTAL SCORE:.*',
+        '',
+        score_text,
+        flags=re.DOTALL,
+    )
+    score_text = re.sub(
+        r'\n*\*{0,2}TOTAL SCORE:.*',
+        '',
+        score_text,
+        flags=re.DOTALL,
+    )
+
+    # ── 4. Compute score from the clean verdict lines
     total_scored = total_possible = correct = attempted = 0
     for m in VERDICT_LINE.finditer(score_text):
         line = m.group(0)
@@ -1404,19 +1415,12 @@ def fix_grading_score(score_text):
         elif m.group(1) == '❌':
             attempted += 1
 
-    # ── 4. Replace TOTAL SCORE line + following summary line in-place
-    new_total = (
-        f"**TOTAL SCORE: {total_scored} / {total_possible}**\n"
+    score_text = score_text.rstrip()
+    score_text += (
+        f"\n\n---\n**TOTAL SCORE: {total_scored} / {total_possible}**\n"
         f"Student attempted {attempted} question(s) with {correct} correct"
         f" (scored {total_scored} out of {total_possible} marks)."
     )
-    score_text = re.sub(
-        r'\*{0,2}TOTAL SCORE:[^\n]*(?:\n(?![✅❌📝⬜\n\*])[^\n]*)?',
-        new_total,
-        score_text,
-        count=1,
-    )
-
     return score_text
 
 
