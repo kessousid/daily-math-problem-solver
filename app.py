@@ -1372,12 +1372,19 @@ def grade_with_answer_key(paper_text, answers_dict, answer_key_text):
     ):
         q_marks[int(m.group(1))] = int(m.group(2))
 
-    # Fallback: single marks value mentioned once ("each question carries 4 marks")
+    # Fallback marks: try several patterns before defaulting to 1
     fallback_marks = 1
-    fm = re.search(r'each\s+(?:question|carries?)\s+(\d+)\s*[Mm]arks?', paper_text, re.IGNORECASE)
-    if fm:
-        fallback_marks = int(fm.group(1))
-    elif q_marks:
+    for _pat in [
+        r'each\s+(?:question|carries?)\s+(\d+)\s*[Mm]arks?',   # "each question carries 4 marks"
+        r'\+\s*(\d+)\s*[Mm]arks?\s*(?:for\s*)?correct',        # "+4 marks for correct" (JEE)
+        r'(\d+)\s*[Mm]arks?\s*(?:for\s*)?(?:each\s*)?correct', # "4 marks for correct"
+        r'[Mm]arks?\s*per\s*[Qq]uestion\s*[:\-]?\s*(\d+)',     # "marks per question: 4"
+    ]:
+        _fm = re.search(_pat, paper_text, re.IGNORECASE)
+        if _fm:
+            fallback_marks = int(_fm.group(1))
+            break
+    if fallback_marks == 1 and q_marks:
         fallback_marks = max(set(q_marks.values()), key=list(q_marks.values()).count)
 
     # ── Detect negative marking from paper text (generic)
@@ -1411,6 +1418,32 @@ def grade_with_answer_key(paper_text, answers_dict, answer_key_text):
             )
 
     return "\n\n".join(lines)
+
+
+def parse_key_from_solutions(solutions_text):
+    """
+    Extract the answer key from Complete Solutions text.
+    Looks for patterns like:
+      **Answer: (A)**   /   Answer: (A) ✓   /   *Answer:* (B)   /   Correct Answer: (C)
+    Returns a dict {q_num: answer_str} — only populated questions included.
+    """
+    key = {}
+    # Find every "QN." or "QN." heading followed eventually by an Answer line
+    for m in re.finditer(
+        r'\bQ\.?\s*(\d+)\b.*?(?:\*{0,2}(?:Correct\s+)?Answer[:\s]+\*{0,2})'
+        r'\s*([A-D\(][^\n✓\*]{0,30})',
+        solutions_text, re.DOTALL | re.IGNORECASE
+    ):
+        q_num   = int(m.group(1))
+        raw_ans = m.group(2).strip().rstrip('✓ .,')
+        # Keep only if looks like a letter option or short numeric
+        if re.match(r'^[\(\[]?[A-D][\)\]]?$', raw_ans.strip()):
+            key[q_num] = raw_ans.strip()
+        elif re.match(r'^-?\d+(\.\d+)?$', raw_ans.strip()):
+            key[q_num] = raw_ans.strip()
+        elif raw_ans:
+            key[q_num] = raw_ans[:30]
+    return key
 
 
 def build_answer_key_prompt(paper_text, grade, board):
@@ -2517,6 +2550,16 @@ elif st.session_state.active_tab == 1:
                     sols = stream_response(client, build_paper_solutions_prompt(
                         st.session_state.paper_text, meta.get("grade",""), meta.get("board","")), ph, max_tokens=8192)
                     st.session_state.paper_solutions = sols
+                    # Update answer key from solutions (step-by-step solutions are reliable)
+                    _key_from_sols = parse_key_from_solutions(sols)
+                    if _key_from_sols:
+                        _existing = {}
+                        for _km in re.finditer(r'Q(\d+)\s*:\s*([^\n]+)', st.session_state.paper_answer_key or ""):
+                            _existing[int(_km.group(1))] = _km.group(2).strip()
+                        _existing.update(_key_from_sols)  # solutions override embedded key
+                        st.session_state.paper_answer_key = "\n".join(
+                            f"Q{q}: {a}" for q, a in sorted(_existing.items())
+                        )
                     st.rerun()
         with cs2:
             if st.button("🔄 Generate New Paper", use_container_width=True):
