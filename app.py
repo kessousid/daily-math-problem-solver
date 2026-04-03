@@ -1415,10 +1415,17 @@ def grade_with_answer_key(paper_text, answers_dict, answer_key_text, q_marks_ove
 
     # ── Detect negative marking from paper text (generic)
     neg_mark = 0
-    if re.search(r'[−\-]\s*1\s*(?:mark|marks|for\s+(?:wrong|incorrect))', paper_text, re.IGNORECASE) or \
-       re.search(r'(?:wrong|incorrect)[^\n]{0,40}[−\-]\s*1', paper_text, re.IGNORECASE) or \
-       re.search(r'\+\s*4\s*[,/]\s*[−\-]\s*1', paper_text):
-        neg_mark = -1
+    _neg_m = re.search(
+        r'(?:'
+        r'[−\-]\s*(\d+)\s*(?:mark|marks)\s*(?:for\s+)?(?:wrong|incorrect|each\s+wrong)'  # "-1 marks for wrong"
+        r'|(?:wrong|incorrect)[^\n]{0,40}[−\-]\s*(\d+)'                                   # "incorrect answer -1"
+        r'|\+\s*\d+\s*[,/]\s*[−\-]\s*(\d+)'                                               # "+4/-1" or "+4, -1"
+        r')',
+        paper_text, re.IGNORECASE
+    )
+    if _neg_m:
+        _neg_val = int(next(g for g in _neg_m.groups() if g is not None))
+        neg_mark = -_neg_val
 
     total_q = max(key.keys())
     lines = []
