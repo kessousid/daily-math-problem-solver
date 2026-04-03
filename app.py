@@ -2252,8 +2252,8 @@ for _i, (_col, _label) in enumerate(zip(_tcols, _tab_labels)):
             st.session_state.active_tab = _i
             if _i != 0:  # leaving Daily Drop — close history panel
                 st.session_state.show_history = False
-            if _i == 0 and not st.session_state.problem_data:
-                # Tab clicked with no problem loaded — auto-generate one
+            if _i == 0:
+                # Daily Drop tab click always generates a fresh problem
                 st.session_state.trigger_generate = True
             st.rerun()
 st.divider()
