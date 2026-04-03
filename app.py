@@ -2192,6 +2192,7 @@ with st.sidebar:
         generate_btn = st.button("🚀 Drop a Problem", use_container_width=True, type="primary")
         if generate_btn:
             st.session_state.active_tab = 0
+            st.session_state.show_history = False
         st.divider()
         st.markdown("<div style='color:rgba(226,232,240,0.4);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;'>Pro Tips</div>", unsafe_allow_html=True)
         st.markdown("<div style='color:rgba(226,232,240,0.55);font-size:0.82rem;line-height:1.7;'>🎯 Always try before hitting hint<br>🧠 Understand the <em>why</em>, not just the answer<br>📈 Level up difficulty once you're comfortable</div>", unsafe_allow_html=True)
@@ -2251,6 +2252,9 @@ for _i, (_col, _label) in enumerate(zip(_tcols, _tab_labels)):
             st.session_state.active_tab = _i
             if _i != 0:  # leaving Daily Drop — close history panel
                 st.session_state.show_history = False
+            if _i == 0 and not st.session_state.problem_data:
+                # Tab clicked with no problem loaded — auto-generate one
+                st.session_state.trigger_generate = True
             st.rerun()
 st.divider()
 
@@ -2295,7 +2299,8 @@ if st.session_state.show_history and st.session_state.active_tab == 0:
 # TAB 1 — DAILY PRACTICE
 # ══════════════════════════════════════════════════════════════════════════════
 if st.session_state.active_tab == 0:
-    if generate_btn:
+    _should_generate = generate_btn or st.session_state.pop("trigger_generate", False)
+    if _should_generate:
         st.session_state.update(show_hint=False, show_solution=False, solution=None)
         client = get_client()
         ph = st.empty()
