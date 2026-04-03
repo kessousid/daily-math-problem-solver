@@ -1836,7 +1836,9 @@ def render_math_box(text, box_type="info", height=None):
     components.html(html, height=estimated_h, scrolling=True)
 
 
-def stream_response(client, prompt, placeholder, max_tokens=1800, image_data=None, media_type=None, model="claude-haiku-4-5-20251001"):
+def stream_response(client, prompt, placeholder, max_tokens=1800, image_data=None, media_type=None, model="claude-haiku-4-5-20251001", hide_after=None):
+    """Stream a response. If hide_after is set, stop displaying text once that
+    marker appears (the full text is still collected and returned)."""
     content = []
     if image_data:
         content.append({"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}})
@@ -1855,7 +1857,12 @@ def stream_response(client, prompt, placeholder, max_tokens=1800, image_data=Non
         ) as stream:
             for text in stream.text_stream:
                 full_text += text
-                placeholder.text(full_text + " ▌")  # plain text avoids partial-LaTeX render errors
+                display = full_text
+                if hide_after:
+                    cut = display.find(hide_after)
+                    if cut != -1:
+                        display = display[:cut]
+                placeholder.text(display + " ▌")
         placeholder.empty()
     except anthropic.AuthenticationError:
         st.error("**Invalid API key.** Create a new key at https://console.anthropic.com/settings/keys and update Streamlit Secrets.", icon="🔑")
@@ -2119,11 +2126,21 @@ with st.sidebar:
         if _sb_user:
             st.markdown(f"<div style='color:#a78bfa;font-size:0.85rem;margin-bottom:0.4rem;'>👤 {_sb_user['email']}</div>", unsafe_allow_html=True)
             if st.button("Sign Out", use_container_width=True):
+                # Clear user state
                 st.session_state.supabase_user = None
                 st.session_state.problem_count = 0
                 st.session_state.streak = 0
                 st.session_state.last_solved_date = None
                 st.session_state.pop("sb_client", None)
+                # Clear paper state so next user sees a clean slate
+                st.session_state.update(
+                    paper_text=None, paper_solutions=None,
+                    show_paper_solutions=False, paper_score=None,
+                    paper_answer_key=None, paper_q_marks=None,
+                    paper_meta=None, paper_generated_this_session=False,
+                )
+                for _qi in range(1, 41):
+                    st.session_state.pop(f"paper_ans_{_qi}", None)
                 st.rerun()
         else:
             if get_supabase():
@@ -2495,7 +2512,8 @@ elif st.session_state.active_tab == 1:
 
         st.info("⏳ Generating your paper — this may take up to 30 seconds…", icon="🔄")
         ph = st.empty()
-        paper = stream_response(client, build_paper_prompt(p_grade, p_board, p_year, topics_note, jee_type), ph, max_tokens=8192)
+        paper = stream_response(client, build_paper_prompt(p_grade, p_board, p_year, topics_note, jee_type), ph, max_tokens=8192,
+                                hide_after="##ANSWER_KEY_START##")
 
         # Parse and strip the embedded answer key (never shown to student)
         paper_clean, answer_key = parse_and_strip_answer_key(paper)
