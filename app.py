@@ -1357,29 +1357,44 @@ def grade_with_answer_key(paper_text, answers_dict, answer_key_text, q_marks_ove
     or None if the answer key is empty/unparseable.
     q_marks_override: dict {q_num: marks} from solutions (overrides paper-text detection).
     """
-    # ── Parse answer key: "Q1: (A)", "Q2: 42", "Q3: proof"
+    # ── Parse answer key: "Q1: (A) [4]", "Q1: (A)", "Q2: 42", etc.
+    #    Marks may be embedded as trailing [N] in the key line.
     key = {}
+    key_marks = {}  # marks extracted directly from answer key lines
     for m in re.finditer(r'Q(\d+)\s*:\s*([^\n]+)', answer_key_text or ""):
-        key[int(m.group(1))] = m.group(2).strip()
+        q_num = int(m.group(1))
+        raw = m.group(2).strip()
+        # Check for embedded marks: "... [4]" at end of line
+        mk_m = re.search(r'\[(\d+)\]\s*$', raw)
+        if mk_m:
+            key_marks[q_num] = int(mk_m.group(1))
+            raw = raw[:mk_m.start()].strip()
+        key[q_num] = raw
 
     if not key:
         return None  # No key — fall back to Claude
 
-    # ── Parse marks per question from paper: "[4 Marks]", "[1 mark]", etc.
-    q_marks = {}
+    # ── Build q_marks: key_marks first, then paper-text, then override
+    q_marks = dict(key_marks)  # start with embedded marks (most reliable)
+
+    # Paper-text: "[4 Marks]" near question heading — wider 250-char window
     for m in re.finditer(
-        r'\bQ\.?\s*(\d+)\b[^\n]{0,80}\[(\d+)\s*[Mm]arks?\]',
+        r'\bQ\.?\s*(\d+)\b[^\n]{0,250}\[(\d+)\s*[Mm]arks?\]',
         paper_text, re.IGNORECASE
     ):
-        q_marks[int(m.group(1))] = int(m.group(2))
+        q_num = int(m.group(1))
+        if q_num not in q_marks:  # don't overwrite embedded marks
+            q_marks[q_num] = int(m.group(2))
 
-    # Fallback marks: try several patterns before defaulting to 1
+    # Fallback global marks: multiple patterns
     fallback_marks = 1
     for _pat in [
-        r'each\s+(?:question|carries?)\s+(\d+)\s*[Mm]arks?',   # "each question carries 4 marks"
-        r'\+\s*(\d+)\s*[Mm]arks?\s*(?:for\s*)?correct',        # "+4 marks for correct" (JEE)
-        r'(\d+)\s*[Mm]arks?\s*(?:for\s*)?(?:each\s*)?correct', # "4 marks for correct"
-        r'[Mm]arks?\s*per\s*[Qq]uestion\s*[:\-]?\s*(\d+)',     # "marks per question: 4"
+        r'\+\s*(\d+)\s*[Mm]arks?\s*(?:for\s*)?correct',          # "+4 marks for correct"
+        r'(?:correct|right)\s+answer[^\n]{0,30}[+＋]\s*(\d+)',    # "correct answer +4"
+        r'each\s+(?:question|carries?|worth)\s+(\d+)\s*[Mm]arks?', # "each carries 4 marks"
+        r'(\d+)\s*[Mm]arks?\s*(?:for\s*)?(?:each\s*)?correct',    # "4 marks for correct"
+        r'[Mm]arks?\s*per\s*[Qq]uestion\s*[:\-]?\s*(\d+)',        # "marks per question: 4"
+        r'\(\s*(\d+)\s*[Mm]arks?\s*(?:each)?\s*\)',               # "(4 marks each)"
     ]:
         _fm = re.search(_pat, paper_text, re.IGNORECASE)
         if _fm:
@@ -1388,12 +1403,15 @@ def grade_with_answer_key(paper_text, answers_dict, answer_key_text, q_marks_ove
     if fallback_marks == 1 and q_marks:
         fallback_marks = max(set(q_marks.values()), key=list(q_marks.values()).count)
 
-    # ── Override with marks from solutions (most reliable source)
+    # Override dict (from solutions, passed in) — fills gaps not covered above
     if q_marks_override:
-        q_marks.update(q_marks_override)
-        _override_vals = list(q_marks_override.values())
-        if _override_vals:
-            fallback_marks = max(set(_override_vals), key=_override_vals.count)
+        for q, m in q_marks_override.items():
+            if q not in q_marks:
+                q_marks[q] = m
+        if fallback_marks == 1:
+            _ov = list(q_marks_override.values())
+            if _ov:
+                fallback_marks = max(set(_ov), key=_ov.count)
 
     # ── Detect negative marking from paper text (generic)
     neg_mark = 0
@@ -2453,9 +2471,12 @@ elif st.session_state.active_tab == 1:
                 for _km in re.finditer(r'Q(\d+)\s*:\s*([^\n]+)', st.session_state.paper_answer_key or ""):
                     _existing[int(_km.group(1))] = _km.group(2).strip()
                 _existing.update(_key_from_sols)
-                st.session_state.paper_answer_key = "\n".join(
-                    f"Q{q}: {a}" for q, a in sorted(_existing.items())
-                )
+                # Embed marks in key lines: "Q1: (A) [4]"
+                _key_lines = []
+                for q, a in sorted(_existing.items()):
+                    _m = _marks_from_sols.get(q)
+                    _key_lines.append(f"Q{q}: {a} [{_m}]" if _m else f"Q{q}: {a}")
+                st.session_state.paper_answer_key = "\n".join(_key_lines)
             if _marks_from_sols:
                 st.session_state.paper_q_marks = _marks_from_sols
         except Exception:
