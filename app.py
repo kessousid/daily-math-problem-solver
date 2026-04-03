@@ -1509,6 +1509,26 @@ def parse_key_from_solutions(solutions_text):
     return key, marks
 
 
+def build_fillin_key_prompt(paper_text, missing_qs, grade, board):
+    """Solve only the specified question numbers and return Q: answer [marks] lines."""
+    exam_ref = f"{board} {grade}" if board else grade
+    qs_str = ", ".join(f"Q{q}" for q in sorted(missing_qs))
+    return f"""You are an expert {exam_ref} mathematician.
+Solve ONLY the following questions from this exam paper: {qs_str}
+
+{LATEX_RULES}
+
+PAPER:
+{paper_text}
+
+Output ONLY one line per question:
+Q20: (A) [4]
+Q21: 42 [4]
+
+Rules: MCQ → option in parentheses e.g. (A). Numerical → number. Proof → proof.
+[N] = marks from paper. Output ONLY these lines, nothing else."""
+
+
 def build_extract_key_prompt(solutions_text):
     """Extract the final answer for every question directly from the solutions text.
     Guarantees grading matches exactly what is displayed to the student."""
@@ -1660,21 +1680,24 @@ def fix_grading_score(score_text, total_marks=None):
 
 def build_paper_solutions_prompt(paper_text, grade, board):
     exam_ref = f"{board} {grade}" if board else grade
-    return f"""Provide COMPLETE solutions and marking scheme for every question in this {exam_ref} paper.
+    return f"""Provide concise solutions for every question in this {exam_ref} paper. Cover ALL questions — do not stop early.
 
 {LATEX_RULES}
 
 PAPER:
 {paper_text}
 
-For each question:
-**Q[n]. [type] — [marks] marks**
-*Solution:* <step-by-step with LaTeX>
-*Answer:* <final answer in LaTeX>
-*Marks Breakdown:* <e.g. 1M setup + 2M working + 1M answer>
+For each question use this compact format:
+**Q[n].** *Answer:* **(X)** — [one-line reason or key step in LaTeX]
 
-For MCQs: state correct option + brief LaTeX justification.
-For Case Study: solve all sub-parts separately."""
+For questions needing working (non-MCQ or multi-step):
+**Q[n].** Key steps in 2–3 lines of LaTeX. *Answer:* final value/expression.
+
+Rules:
+- EVERY question must be answered — do not skip any.
+- Keep each solution to 3–5 lines maximum. Omit routine algebra.
+- State the correct MCQ option clearly.
+- For Case Study: answer each sub-part on its own line."""
 
 
 def build_doubt_prompt(grade_ctx, question_text, extra_context=""):
@@ -2497,21 +2520,44 @@ elif st.session_state.active_tab == 1:
                 key_raw = stream_response(client, build_extract_key_prompt(sols),
                                           key_ph, max_tokens=1024)
                 key_ph.empty()
-            # Parse "Q1: (A) [4]" lines directly — no regex heroics needed
-            _key_lines_out = []
+            # Parse "Q1: (A) [4]" lines — helper used twice below
+            def _parse_key_lines(raw_text, key_dict, marks_dict):
+                for _line in raw_text.splitlines():
+                    _line = _line.strip()
+                    _km = re.match(r'Q(\d+)\s*:\s*(.+)', _line, re.IGNORECASE)
+                    if not _km:
+                        continue
+                    _qn, _rest = int(_km.group(1)), _km.group(2).strip()
+                    _mm = re.search(r'\[(\d+)\]\s*$', _rest)
+                    if _mm:
+                        marks_dict[_qn] = int(_mm.group(1))
+                        _rest = _rest[:_mm.start()].strip()
+                    key_dict[_qn] = _rest
+
+            _key_dict = {}
             _marks_dict = {}
-            for _line in key_raw.splitlines():
-                _line = _line.strip()
-                _km = re.match(r'Q(\d+)\s*:\s*(.+)', _line, re.IGNORECASE)
-                if not _km:
-                    continue
-                _qn, _rest = int(_km.group(1)), _km.group(2).strip()
-                _mm = re.search(r'\[(\d+)\]\s*$', _rest)
-                if _mm:
-                    _marks_dict[_qn] = int(_mm.group(1))
-                    _rest = _rest[:_mm.start()].strip()
-                _key_lines_out.append(f"Q{_qn}: {_rest} [{_marks_dict[_qn]}]" if _qn in _marks_dict else f"Q{_qn}: {_rest}")
-            if _key_lines_out:
+            _parse_key_lines(key_raw, _key_dict, _marks_dict)
+
+            # Fill-in any questions missing from extracted key (solutions were truncated)
+            _total_q = detect_question_count(paper_clean)
+            _missing = [q for q in range(1, _total_q + 1) if q not in _key_dict]
+            if _missing:
+                with st.spinner(f"🔑 Solving remaining {len(_missing)} question(s)…"):
+                    fill_ph = st.empty()
+                    fill_raw = stream_response(
+                        client,
+                        build_fillin_key_prompt(paper_clean, _missing, p_grade, p_board),
+                        fill_ph, max_tokens=512
+                    )
+                    fill_ph.empty()
+                _parse_key_lines(fill_raw, _key_dict, _marks_dict)
+
+            if _key_dict:
+                _key_lines_out = []
+                for _qn in sorted(_key_dict):
+                    _ans = _key_dict[_qn]
+                    _m   = _marks_dict.get(_qn)
+                    _key_lines_out.append(f"Q{_qn}: {_ans} [{_m}]" if _m else f"Q{_qn}: {_ans}")
                 st.session_state.paper_answer_key = "\n".join(_key_lines_out)
             if _marks_dict:
                 st.session_state.paper_q_marks = _marks_dict
