@@ -1448,38 +1448,57 @@ def grade_with_answer_key(paper_text, answers_dict, answer_key_text, q_marks_ove
 
 def parse_key_from_solutions(solutions_text):
     """
-    Extract the answer key AND per-question marks from Complete Solutions text.
-    Splits by question heading so answers cannot bleed across questions.
+    Extract answer key and marks from the ##ANSWER_KEY_START## block that
+    build_paper_solutions_prompt asks Claude to append.
+    Falls back to scanning for Answer: lines if the block is absent.
     Returns (key_dict {q_num: answer_str}, marks_dict {q_num: int}).
     """
     key = {}
     marks = {}
-    # Split at each question heading — handles **Q3., ## Q3., Q3. etc.
+
+    # ── Primary: parse the explicit structured block ──────────────────────
+    block_m = re.search(
+        r'##ANSWER_KEY_START##\s*(.*?)\s*##ANSWER_KEY_END##',
+        solutions_text, re.DOTALL | re.IGNORECASE
+    )
+    if block_m:
+        for line in block_m.group(1).splitlines():
+            line = line.strip()
+            if not line or line.startswith('('):   # skip comment lines
+                continue
+            m = re.match(r'Q(\d+)\s*:\s*(.+)', line, re.IGNORECASE)
+            if not m:
+                continue
+            q_num = int(m.group(1))
+            rest  = m.group(2).strip()
+            # Extract trailing [marks]
+            mk_m = re.search(r'\[(\d+)\]\s*$', rest)
+            if mk_m:
+                marks[q_num] = int(mk_m.group(1))
+                rest = rest[:mk_m.start()].strip()
+            key[q_num] = rest
+        if key:
+            return key, marks   # block found and parsed — done
+
+    # ── Fallback: scan each question chunk for "Answer:" line ─────────────
     chunks = re.split(r'\n(?=\*{0,2}(?:#+\s*)?Q\.?\s*\d+[.\)\s])', solutions_text)
     for chunk in chunks:
         qm = re.match(r'\*{0,2}(?:#+\s*)?Q\.?\s*(\d+)', chunk.strip())
         if not qm:
             continue
         q_num = int(qm.group(1))
-
-        # Extract marks from header line: "— 4 marks" or "[4 Marks]"
-        mm = re.search(
-            r'(?:[—–\-]\s*(\d+)\s*[Mm]arks?|\[(\d+)\s*[Mm]arks?\])',
-            chunk[:300]
-        )
+        mm = re.search(r'(?:[—–\-]\s*(\d+)\s*[Mm]arks?|\[(\d+)\s*[Mm]arks?\])', chunk[:300])
         if mm:
             marks[q_num] = int(mm.group(1) or mm.group(2))
-
-        # Find the LAST "Answer:" line in the chunk (avoid matching mid-solution mentions)
-        all_answers = re.findall(
+        all_ans = re.findall(
             r'\*{0,2}(?:Correct\s+)?Answer[:\s]+\*{0,2}\s*\**\s*([A-D\(\[][^\n✓\*]{0,25})',
             chunk, re.IGNORECASE
         )
-        if all_answers:
-            raw_ans = all_answers[-1].strip().rstrip('✓ .,*)')
-            raw_ans = re.sub(r'\s+.*$', '', raw_ans)  # keep first token only
-            if raw_ans:
-                key[q_num] = raw_ans
+        if all_ans:
+            raw = all_ans[-1].strip().rstrip('✓ .,*)')
+            raw = re.sub(r'\s+.*$', '', raw)
+            if raw:
+                key[q_num] = raw
     return key, marks
 
 
@@ -1651,7 +1670,18 @@ For each question:
 *Marks Breakdown:* <e.g. 1M setup + 2M working + 1M answer>
 
 For MCQs: state correct option + brief LaTeX justification.
-For Case Study: solve all sub-parts separately."""
+For Case Study: solve all sub-parts separately.
+
+After ALL solutions, output this EXACT block — every question on its own line, nothing else inside:
+##ANSWER_KEY_START##
+Q1: (A) [4]
+Q2: (B) [3]
+(format per line: Q<n>: <answer> [<marks>]
+  MCQ → option letter in parentheses e.g. (A) (B) (C) (D)
+  Numerical → the number e.g. 42
+  Proof/show/derive → the word: proof
+  marks → integer from the paper's marking scheme)
+##ANSWER_KEY_END##"""
 
 
 def build_doubt_prompt(grade_ctx, question_text, extra_context=""):
@@ -2464,7 +2494,12 @@ elif st.session_state.active_tab == 1:
                 sols = stream_response(client, build_paper_solutions_prompt(
                     paper_clean, p_grade, p_board), sols_ph, max_tokens=8192)
                 sols_ph.empty()
-            st.session_state.paper_solutions = sols
+            # Strip the answer key block before storing (students must not see it)
+            sols_display = re.sub(
+                r'\n*##ANSWER_KEY_START##.*?##ANSWER_KEY_END##',
+                '', sols, flags=re.DOTALL | re.IGNORECASE
+            ).strip()
+            st.session_state.paper_solutions = sols_display
             _key_from_sols, _marks_from_sols = parse_key_from_solutions(sols)
             if _key_from_sols:
                 _existing = {}
