@@ -1509,30 +1509,27 @@ def parse_key_from_solutions(solutions_text):
     return key, marks
 
 
-def build_answer_key_prompt(paper_text, grade, board):
-    """Sonnet solves the paper and produces a clean answer key with marks."""
-    exam_ref = f"{board} {grade}" if board else grade
-    return f"""You are an expert {exam_ref} mathematician. Solve every question in this exam paper carefully and produce a clean answer key.
+def build_extract_key_prompt(solutions_text):
+    """Extract the final answer for every question directly from the solutions text.
+    Guarantees grading matches exactly what is displayed to the student."""
+    return f"""Below are complete step-by-step solutions to a math exam.
+Read each solution carefully and extract the FINAL answer stated at the end of each solution.
 
-{LATEX_RULES}
+SOLUTIONS:
+{solutions_text}
 
-EXAM PAPER:
-{paper_text}
-
-OUTPUT FORMAT — one line per question, nothing else:
+Output ONLY one line per question in this exact format — nothing else:
 Q1: (A) [4]
 Q2: 42 [4]
 Q3: proof [5]
-Q4: (C) [4]
 
 Rules:
-- MCQ: write the correct option letter in parentheses e.g. (A) (B) (C) (D).
-- Numerical/integer: write the exact number.
-- Proof/show/derive/demonstrate: write "proof".
-- Marks [N]: the integer marks for that question from the paper's marking scheme.
-- Sub-parts (e.g. Q36a, Q36b): list each on its own line.
-
-Output ONLY the Q[n]: answer [marks] lines. No working, no explanations."""
+- MCQ: the correct option letter in parentheses e.g. (A) (B) (C) (D)
+- Numerical: the exact number as stated in the solution
+- Proof/show/derive: write proof
+- [N]: marks for that question as stated in the solution
+- Copy the answer EXACTLY as it appears in the solution — do not re-solve
+- Output ONLY these lines, no other text"""
 
 
 def build_paper_grading_prompt(paper_text, answers_dict, answer_key, grade, board):
@@ -2493,11 +2490,12 @@ elif st.session_state.active_tab == 1:
                 sols_ph.empty()
             st.session_state.paper_solutions = sols
 
-            # Step 2: dedicated focused call for the answer key (short, accurate)
-            with st.spinner("🔑 Building answer key…"):
+            # Step 2: extract answer key FROM the solutions — not re-solving,
+            # so grading is guaranteed to match what the student sees
+            with st.spinner("🔑 Extracting answer key from solutions…"):
                 key_ph = st.empty()
-                key_raw = stream_response(client, build_answer_key_prompt(
-                    paper_clean, p_grade, p_board), key_ph, max_tokens=1024)
+                key_raw = stream_response(client, build_extract_key_prompt(sols),
+                                          key_ph, max_tokens=1024)
                 key_ph.empty()
             # Parse "Q1: (A) [4]" lines directly — no regex heroics needed
             _key_lines_out = []
