@@ -1510,7 +1510,7 @@ def parse_key_from_solutions(solutions_text):
 
 
 def build_answer_key_prompt(paper_text, grade, board):
-    """Sonnet solves the paper once and produces an authoritative answer key."""
+    """Sonnet solves the paper and produces a clean answer key with marks."""
     exam_ref = f"{board} {grade}" if board else grade
     return f"""You are an expert {exam_ref} mathematician. Solve every question in this exam paper carefully and produce a clean answer key.
 
@@ -1520,19 +1520,19 @@ EXAM PAPER:
 {paper_text}
 
 OUTPUT FORMAT — one line per question, nothing else:
-Q1: (A)
-Q2: 42
-Q3: proof
-Q4: $x = 3$
+Q1: (A) [4]
+Q2: 42 [4]
+Q3: proof [5]
+Q4: (C) [4]
 
 Rules:
-- MCQ: write the correct option letter in parentheses, e.g. (A) or (C).
+- MCQ: write the correct option letter in parentheses e.g. (A) (B) (C) (D).
 - Numerical/integer: write the exact number.
-- Algebraic: write the simplified final expression in LaTeX.
 - Proof/show/derive/demonstrate: write "proof".
+- Marks [N]: the integer marks for that question from the paper's marking scheme.
 - Sub-parts (e.g. Q36a, Q36b): list each on its own line.
 
-Output ONLY the Q[n]: answer lines. No working, no explanations."""
+Output ONLY the Q[n]: answer [marks] lines. No working, no explanations."""
 
 
 def build_paper_grading_prompt(paper_text, answers_dict, answer_key, grade, board):
@@ -1677,18 +1677,7 @@ For each question:
 *Marks Breakdown:* <e.g. 1M setup + 2M working + 1M answer>
 
 For MCQs: state correct option + brief LaTeX justification.
-For Case Study: solve all sub-parts separately.
-
-After ALL solutions, output this EXACT block — every question on its own line, nothing else inside:
-##ANSWER_KEY_START##
-Q1: (A) [4]
-Q2: (B) [3]
-(format per line: Q<n>: <answer> [<marks>]
-  MCQ → option letter in parentheses e.g. (A) (B) (C) (D)
-  Numerical → the number e.g. 42
-  Proof/show/derive → the word: proof
-  marks → integer from the paper's marking scheme)
-##ANSWER_KEY_END##"""
+For Case Study: solve all sub-parts separately."""
 
 
 def build_doubt_prompt(grade_ctx, question_text, extra_context=""):
@@ -2496,31 +2485,38 @@ elif st.session_state.active_tab == 1:
 
         # Silently generate complete solutions in background to build reliable answer key
         try:
-            with st.spinner("🔑 Preparing answer key…"):
+            # Step 1: generate solutions for display
+            with st.spinner("📖 Generating complete solutions…"):
                 sols_ph = st.empty()
                 sols = stream_response(client, build_paper_solutions_prompt(
                     paper_clean, p_grade, p_board), sols_ph, max_tokens=8192)
                 sols_ph.empty()
-            # Strip the answer key block before storing (students must not see it)
-            sols_display = re.sub(
-                r'\n*##ANSWER_KEY_START##.*?##ANSWER_KEY_END##',
-                '', sols, flags=re.DOTALL | re.IGNORECASE
-            ).strip()
-            st.session_state.paper_solutions = sols_display
-            _key_from_sols, _marks_from_sols = parse_key_from_solutions(sols)
-            if _key_from_sols:
-                _existing = {}
-                for _km in re.finditer(r'Q(\d+)\s*:\s*([^\n]+)', st.session_state.paper_answer_key or ""):
-                    _existing[int(_km.group(1))] = _km.group(2).strip()
-                _existing.update(_key_from_sols)
-                # Embed marks in key lines: "Q1: (A) [4]"
-                _key_lines = []
-                for q, a in sorted(_existing.items()):
-                    _m = _marks_from_sols.get(q)
-                    _key_lines.append(f"Q{q}: {a} [{_m}]" if _m else f"Q{q}: {a}")
-                st.session_state.paper_answer_key = "\n".join(_key_lines)
-            if _marks_from_sols:
-                st.session_state.paper_q_marks = _marks_from_sols
+            st.session_state.paper_solutions = sols
+
+            # Step 2: dedicated focused call for the answer key (short, accurate)
+            with st.spinner("🔑 Building answer key…"):
+                key_ph = st.empty()
+                key_raw = stream_response(client, build_answer_key_prompt(
+                    paper_clean, p_grade, p_board), key_ph, max_tokens=1024)
+                key_ph.empty()
+            # Parse "Q1: (A) [4]" lines directly — no regex heroics needed
+            _key_lines_out = []
+            _marks_dict = {}
+            for _line in key_raw.splitlines():
+                _line = _line.strip()
+                _km = re.match(r'Q(\d+)\s*:\s*(.+)', _line, re.IGNORECASE)
+                if not _km:
+                    continue
+                _qn, _rest = int(_km.group(1)), _km.group(2).strip()
+                _mm = re.search(r'\[(\d+)\]\s*$', _rest)
+                if _mm:
+                    _marks_dict[_qn] = int(_mm.group(1))
+                    _rest = _rest[:_mm.start()].strip()
+                _key_lines_out.append(f"Q{_qn}: {_rest} [{_marks_dict[_qn]}]" if _qn in _marks_dict else f"Q{_qn}: {_rest}")
+            if _key_lines_out:
+                st.session_state.paper_answer_key = "\n".join(_key_lines_out)
+            if _marks_dict:
+                st.session_state.paper_q_marks = _marks_dict
         except Exception:
             pass  # answer key from embedded block is still available as fallback
 
