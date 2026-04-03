@@ -1349,12 +1349,13 @@ def _norm_answer(ans):
     return re.sub(r'[\s().*/]', '', ans).upper()
 
 
-def grade_with_answer_key(paper_text, answers_dict, answer_key_text):
+def grade_with_answer_key(paper_text, answers_dict, answer_key_text, q_marks_override=None):
     """
     Grade entirely in Python using the embedded answer key.
     No AI involved — zero revision risk.
     Returns verdict text in the same format as the grading prompt expects,
     or None if the answer key is empty/unparseable.
+    q_marks_override: dict {q_num: marks} from solutions (overrides paper-text detection).
     """
     # ── Parse answer key: "Q1: (A)", "Q2: 42", "Q3: proof"
     key = {}
@@ -1386,6 +1387,13 @@ def grade_with_answer_key(paper_text, answers_dict, answer_key_text):
             break
     if fallback_marks == 1 and q_marks:
         fallback_marks = max(set(q_marks.values()), key=list(q_marks.values()).count)
+
+    # ── Override with marks from solutions (most reliable source)
+    if q_marks_override:
+        q_marks.update(q_marks_override)
+        _override_vals = list(q_marks_override.values())
+        if _override_vals:
+            fallback_marks = max(set(_override_vals), key=_override_vals.count)
 
     # ── Detect negative marking from paper text (generic)
     neg_mark = 0
@@ -1422,29 +1430,39 @@ def grade_with_answer_key(paper_text, answers_dict, answer_key_text):
 
 def parse_key_from_solutions(solutions_text):
     """
-    Extract the answer key from Complete Solutions text.
+    Extract the answer key AND per-question marks from Complete Solutions text.
     Splits by question heading so answers cannot bleed across questions.
-    Returns a dict {q_num: answer_str}.
+    Returns (key_dict {q_num: answer_str}, marks_dict {q_num: int}).
     """
     key = {}
-    # Split into per-question chunks at each Q / Q. heading on its own line
-    chunks = re.split(r'\n(?=(?:#+\s*)?Q\.?\s*\d+[\b\.\)\s])', solutions_text)
+    marks = {}
+    # Split at each question heading — handles **Q3., ## Q3., Q3. etc.
+    chunks = re.split(r'\n(?=\*{0,2}(?:#+\s*)?Q\.?\s*\d+[.\)\s])', solutions_text)
     for chunk in chunks:
-        qm = re.match(r'(?:#+\s*)?Q\.?\s*(\d+)', chunk.strip())
+        qm = re.match(r'\*{0,2}(?:#+\s*)?Q\.?\s*(\d+)', chunk.strip())
         if not qm:
             continue
         q_num = int(qm.group(1))
-        # Look for "Answer: X" or "Correct Answer: X" within this chunk only
-        am = re.search(
-            r'\*{0,2}(?:Correct\s+)?Answer[:\s]+\*{0,2}\s*\**\s*([A-D\(\[][^\n✓\*\n]{0,25})',
+
+        # Extract marks from header line: "— 4 marks" or "[4 Marks]"
+        mm = re.search(
+            r'(?:[—–\-]\s*(\d+)\s*[Mm]arks?|\[(\d+)\s*[Mm]arks?\])',
+            chunk[:300]
+        )
+        if mm:
+            marks[q_num] = int(mm.group(1) or mm.group(2))
+
+        # Find the LAST "Answer:" line in the chunk (avoid matching mid-solution mentions)
+        all_answers = re.findall(
+            r'\*{0,2}(?:Correct\s+)?Answer[:\s]+\*{0,2}\s*\**\s*([A-D\(\[][^\n✓\*]{0,25})',
             chunk, re.IGNORECASE
         )
-        if am:
-            raw_ans = am.group(1).strip().rstrip('✓ .,*)')
-            raw_ans = re.sub(r'\s+.*$', '', raw_ans)  # keep only first token
+        if all_answers:
+            raw_ans = all_answers[-1].strip().rstrip('✓ .,*)')
+            raw_ans = re.sub(r'\s+.*$', '', raw_ans)  # keep first token only
             if raw_ans:
                 key[q_num] = raw_ans
-    return key
+    return key, marks
 
 
 def build_answer_key_prompt(paper_text, grade, board):
@@ -1809,7 +1827,7 @@ def extract_pdf_text(pdf_bytes):
 for k, v in {
     "problem_data": None, "solution": None,
     "show_hint": False, "show_solution": False, "problem_count": 0,
-    "paper_text": None, "paper_solutions": None, "show_paper_solutions": False, "paper_meta": None, "paper_answer_key": None,
+    "paper_text": None, "paper_solutions": None, "show_paper_solutions": False, "paper_meta": None, "paper_answer_key": None, "paper_q_marks": None,
     "doubt_response": None, "active_tab": 0,
     # answer verification
     "answer_result": None, "answer_feedback": "",
@@ -2408,7 +2426,7 @@ elif st.session_state.active_tab == 1:
                                disabled=paper_disabled)
 
     if gen_paper_btn:
-        st.session_state.update(paper_solutions=None, show_paper_solutions=False, paper_answer_key=None)
+        st.session_state.update(paper_solutions=None, show_paper_solutions=False, paper_answer_key=None, paper_q_marks=None)
         client = get_client()
 
         st.info("⏳ Generating your paper — this may take up to 30 seconds…", icon="🔄")
@@ -2429,7 +2447,7 @@ elif st.session_state.active_tab == 1:
                     paper_clean, p_grade, p_board), sols_ph, max_tokens=8192)
                 sols_ph.empty()
             st.session_state.paper_solutions = sols
-            _key_from_sols = parse_key_from_solutions(sols)
+            _key_from_sols, _marks_from_sols = parse_key_from_solutions(sols)
             if _key_from_sols:
                 _existing = {}
                 for _km in re.finditer(r'Q(\d+)\s*:\s*([^\n]+)', st.session_state.paper_answer_key or ""):
@@ -2438,6 +2456,8 @@ elif st.session_state.active_tab == 1:
                 st.session_state.paper_answer_key = "\n".join(
                     f"Q{q}: {a}" for q, a in sorted(_existing.items())
                 )
+            if _marks_from_sols:
+                st.session_state.paper_q_marks = _marks_from_sols
         except Exception:
             pass  # answer key from embedded block is still available as fallback
 
@@ -2523,7 +2543,7 @@ elif st.session_state.active_tab == 1:
             if st.button("🔄 Generate New Paper", use_container_width=True):
                 st.session_state.update(paper_text=None, paper_solutions=None,
                                         show_paper_solutions=False, paper_score=None,
-                                        paper_answer_key=None)
+                                        paper_answer_key=None, paper_q_marks=None)
                 for _qi in range(1, 41):
                     st.session_state.pop(f"paper_ans_{_qi}", None)
                 st.rerun()
@@ -2540,7 +2560,8 @@ elif st.session_state.active_tab == 1:
                 _total_marks = parse_total_marks(st.session_state.paper_text)
 
                 score_text = grade_with_answer_key(
-                    st.session_state.paper_text, _answers, _answer_key
+                    st.session_state.paper_text, _answers, _answer_key,
+                    q_marks_override=st.session_state.get("paper_q_marks")
                 )
 
                 if score_text is None:
@@ -2564,14 +2585,14 @@ elif st.session_state.active_tab == 1:
                 st.session_state.show_paper_solutions = True  # always reveal solutions on submit
                 st.rerun()
 
+        if st.session_state.show_paper_solutions and st.session_state.paper_solutions:
+            st.markdown('<p class="section-label label-solution">✅ Complete Solutions & Marking Scheme</p>', unsafe_allow_html=True)
+            render_math_markdown(st.session_state.paper_solutions)
+
         if st.session_state.paper_score:
             st.markdown('<p class="section-label label-solution">📊 Your Score & Feedback</p>',
                         unsafe_allow_html=True)
             render_math_markdown(st.session_state.paper_score)
-
-        if st.session_state.show_paper_solutions and st.session_state.paper_solutions:
-            st.markdown('<p class="section-label label-solution">✅ Complete Solutions & Marking Scheme</p>', unsafe_allow_html=True)
-            render_math_markdown(st.session_state.paper_solutions)
     else:
         st.markdown("""
 **How it works:**
