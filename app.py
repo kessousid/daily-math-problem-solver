@@ -2420,6 +2420,26 @@ elif st.session_state.active_tab == 1:
         st.session_state.paper_answer_key = answer_key
         st.session_state.paper_meta = {"grade": p_grade, "board": p_board, "year": p_year, "jee_type": jee_type}
 
+        # Silently generate complete solutions in background to build reliable answer key
+        try:
+            with st.spinner("🔑 Preparing answer key…"):
+                sols_ph = st.empty()
+                sols = stream_response(client, build_paper_solutions_prompt(
+                    paper_clean, p_grade, p_board), sols_ph, max_tokens=8192)
+                sols_ph.empty()
+            st.session_state.paper_solutions = sols
+            _key_from_sols = parse_key_from_solutions(sols)
+            if _key_from_sols:
+                _existing = {}
+                for _km in re.finditer(r'Q(\d+)\s*:\s*([^\n]+)', st.session_state.paper_answer_key or ""):
+                    _existing[int(_km.group(1))] = _km.group(2).strip()
+                _existing.update(_key_from_sols)
+                st.session_state.paper_answer_key = "\n".join(
+                    f"Q{q}: {a}" for q, a in sorted(_existing.items())
+                )
+        except Exception:
+            pass  # answer key from embedded block is still available as fallback
+
         # Log usage and mark limit
         _uid   = _current_user["id"]    if _current_user else None
         _email = _current_user["email"] if _current_user else None
@@ -2543,24 +2563,7 @@ elif st.session_state.active_tab == 1:
         with cs1:
             if st.button("✅ Generate Complete Solutions & Marking Scheme", type="primary", use_container_width=True):
                 st.session_state.show_paper_solutions = True
-                if not st.session_state.paper_solutions:
-                    client = get_client()
-                    st.info("⏳ Generating full solutions…", icon="🔄")
-                    ph = st.empty()
-                    sols = stream_response(client, build_paper_solutions_prompt(
-                        st.session_state.paper_text, meta.get("grade",""), meta.get("board","")), ph, max_tokens=8192)
-                    st.session_state.paper_solutions = sols
-                    # Update answer key from solutions (step-by-step solutions are reliable)
-                    _key_from_sols = parse_key_from_solutions(sols)
-                    if _key_from_sols:
-                        _existing = {}
-                        for _km in re.finditer(r'Q(\d+)\s*:\s*([^\n]+)', st.session_state.paper_answer_key or ""):
-                            _existing[int(_km.group(1))] = _km.group(2).strip()
-                        _existing.update(_key_from_sols)  # solutions override embedded key
-                        st.session_state.paper_answer_key = "\n".join(
-                            f"Q{q}: {a}" for q, a in sorted(_existing.items())
-                        )
-                    st.rerun()
+                st.rerun()
         with cs2:
             if st.button("🔄 Generate New Paper", use_container_width=True):
                 st.session_state.update(paper_text=None, paper_solutions=None,
