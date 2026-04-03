@@ -1423,26 +1423,27 @@ def grade_with_answer_key(paper_text, answers_dict, answer_key_text):
 def parse_key_from_solutions(solutions_text):
     """
     Extract the answer key from Complete Solutions text.
-    Looks for patterns like:
-      **Answer: (A)**   /   Answer: (A) ✓   /   *Answer:* (B)   /   Correct Answer: (C)
-    Returns a dict {q_num: answer_str} — only populated questions included.
+    Splits by question heading so answers cannot bleed across questions.
+    Returns a dict {q_num: answer_str}.
     """
     key = {}
-    # Find every "QN." or "QN." heading followed eventually by an Answer line
-    for m in re.finditer(
-        r'\bQ\.?\s*(\d+)\b.*?(?:\*{0,2}(?:Correct\s+)?Answer[:\s]+\*{0,2})'
-        r'\s*([A-D\(][^\n✓\*]{0,30})',
-        solutions_text, re.DOTALL | re.IGNORECASE
-    ):
-        q_num   = int(m.group(1))
-        raw_ans = m.group(2).strip().rstrip('✓ .,')
-        # Keep only if looks like a letter option or short numeric
-        if re.match(r'^[\(\[]?[A-D][\)\]]?$', raw_ans.strip()):
-            key[q_num] = raw_ans.strip()
-        elif re.match(r'^-?\d+(\.\d+)?$', raw_ans.strip()):
-            key[q_num] = raw_ans.strip()
-        elif raw_ans:
-            key[q_num] = raw_ans[:30]
+    # Split into per-question chunks at each Q / Q. heading on its own line
+    chunks = re.split(r'\n(?=(?:#+\s*)?Q\.?\s*\d+[\b\.\)\s])', solutions_text)
+    for chunk in chunks:
+        qm = re.match(r'(?:#+\s*)?Q\.?\s*(\d+)', chunk.strip())
+        if not qm:
+            continue
+        q_num = int(qm.group(1))
+        # Look for "Answer: X" or "Correct Answer: X" within this chunk only
+        am = re.search(
+            r'\*{0,2}(?:Correct\s+)?Answer[:\s]+\*{0,2}\s*\**\s*([A-D\(\[][^\n✓\*\n]{0,25})',
+            chunk, re.IGNORECASE
+        )
+        if am:
+            raw_ans = am.group(1).strip().rstrip('✓ .,*)')
+            raw_ans = re.sub(r'\s+.*$', '', raw_ans)  # keep only first token
+            if raw_ans:
+                key[q_num] = raw_ans
     return key
 
 
@@ -2506,65 +2507,19 @@ elif st.session_state.active_tab == 1:
                         st.rerun()
 
             st.markdown("---")
-            _submit_col, _clear_col = st.columns([2, 1])
-            with _submit_col:
-                submit_answers_btn = st.button("📊 Submit All & Get Score", type="primary",
-                                               use_container_width=True)
-            with _clear_col:
-                if st.button("🗑️ Clear Answers", use_container_width=True):
-                    for _qi in range(1, q_count + 1):
-                        st.session_state[f"paper_ans_{_qi}"] = ""
-                    st.session_state.paper_score = None
-                    st.rerun()
-
-            if submit_answers_btn:
-                _answers = {_qi: st.session_state.get(f"paper_ans_{_qi}", "")
-                            for _qi in range(1, q_count + 1)}
-                _filled  = sum(1 for v in _answers.values() if v.strip())
-                if _filled == 0:
-                    st.warning("Please enter at least one answer before submitting.", icon="✏️")
-                else:
-                    st.session_state.paper_score = None
-                    _answer_key  = st.session_state.get("paper_answer_key") or ""
-                    _total_marks = parse_total_marks(st.session_state.paper_text)
-
-                    # ── Try pure-Python grading first (no AI, no revisions)
-                    score_text = grade_with_answer_key(
-                        st.session_state.paper_text, _answers, _answer_key
-                    )
-
-                    if score_text is None:
-                        # Answer key missing — fall back to Claude
-                        client = get_client()
-                        st.info(f"⏳ Grading {_filled} answer(s)…", icon="🔄")
-                        ph = st.empty()
-                        score_text = stream_response(
-                            client,
-                            build_paper_grading_prompt(
-                                st.session_state.paper_text, _answers,
-                                _answer_key,
-                                meta.get("grade", ""), meta.get("board", "")
-                            ),
-                            ph,
-                            max_tokens=4096,
-                            model="claude-sonnet-4-6",
-                        )
-
-                    st.session_state.paper_score = fix_grading_score(score_text, total_marks=_total_marks)
-                    st.rerun()
-
-        if st.session_state.paper_score:
-            st.markdown('<p class="section-label label-solution">📊 Your Score & Feedback</p>',
-                        unsafe_allow_html=True)
-            render_math_markdown(st.session_state.paper_score)
-
-        st.divider()
-        cs1, cs2 = st.columns(2)
-        with cs1:
-            if st.button("✅ Generate Complete Solutions & Marking Scheme", type="primary", use_container_width=True):
-                st.session_state.show_paper_solutions = True
+            if st.button("🗑️ Clear Answers", use_container_width=True):
+                for _qi in range(1, q_count + 1):
+                    st.session_state[f"paper_ans_{_qi}"] = ""
+                st.session_state.paper_score = None
+                st.session_state.show_paper_solutions = False
                 st.rerun()
-        with cs2:
+
+        # ── Single submit button (outside expander for visibility) ──────────
+        _sub_col, _new_col = st.columns([2, 1])
+        with _sub_col:
+            submit_btn = st.button("📊 Submit to get score and Complete solution",
+                                   type="primary", use_container_width=True)
+        with _new_col:
             if st.button("🔄 Generate New Paper", use_container_width=True):
                 st.session_state.update(paper_text=None, paper_solutions=None,
                                         show_paper_solutions=False, paper_score=None,
@@ -2572,6 +2527,47 @@ elif st.session_state.active_tab == 1:
                 for _qi in range(1, 41):
                     st.session_state.pop(f"paper_ans_{_qi}", None)
                 st.rerun()
+
+        if submit_btn:
+            _answers = {_qi: st.session_state.get(f"paper_ans_{_qi}", "")
+                        for _qi in range(1, q_count + 1)}
+            _filled  = sum(1 for v in _answers.values() if v.strip())
+            if _filled == 0:
+                st.warning("Please enter at least one answer before submitting.", icon="✏️")
+            else:
+                st.session_state.paper_score = None
+                _answer_key  = st.session_state.get("paper_answer_key") or ""
+                _total_marks = parse_total_marks(st.session_state.paper_text)
+
+                score_text = grade_with_answer_key(
+                    st.session_state.paper_text, _answers, _answer_key
+                )
+
+                if score_text is None:
+                    # Answer key missing — fall back to Claude
+                    client = get_client()
+                    st.info(f"⏳ Grading {_filled} answer(s)…", icon="🔄")
+                    ph = st.empty()
+                    score_text = stream_response(
+                        client,
+                        build_paper_grading_prompt(
+                            st.session_state.paper_text, _answers,
+                            _answer_key,
+                            meta.get("grade", ""), meta.get("board", "")
+                        ),
+                        ph,
+                        max_tokens=4096,
+                        model="claude-sonnet-4-6",
+                    )
+
+                st.session_state.paper_score = fix_grading_score(score_text, total_marks=_total_marks)
+                st.session_state.show_paper_solutions = True  # always reveal solutions on submit
+                st.rerun()
+
+        if st.session_state.paper_score:
+            st.markdown('<p class="section-label label-solution">📊 Your Score & Feedback</p>',
+                        unsafe_allow_html=True)
+            render_math_markdown(st.session_state.paper_score)
 
         if st.session_state.show_paper_solutions and st.session_state.paper_solutions:
             st.markdown('<p class="section-label label-solution">✅ Complete Solutions & Marking Scheme</p>', unsafe_allow_html=True)
