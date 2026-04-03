@@ -111,7 +111,7 @@ st.markdown("""
       {
         "@type": "Question",
         "name": "Is Maths Daily Helper free?",
-        "acceptedAnswer": {"@type": "Answer", "text": "Yes, Maths Daily Helper is 100% free — no sign-up, no subscription, no credit card. Every feature including problem generation, hints, step-by-step solutions, and exam paper generation is available at no cost."}
+        "acceptedAnswer": {"@type": "Answer", "text": "Yes, Maths Daily Helper is 100% free — no subscription, no credit card. Simply create a free account to access all features including problem generation, hints, step-by-step solutions, and exam paper generation."}
       },
       {
         "@type": "Question",
@@ -2232,7 +2232,7 @@ if not st.session_state.supabase_user:
             "Save your streak, track your progress &nbsp;·&nbsp; "
             "Sign in via the sidebar → &nbsp;·&nbsp; "
             "🎓 Registration is now required to use Maths Daily Helper &nbsp;·&nbsp; "
-            "Create your free account — it's completely free!")
+            "Create your free account to get started!")
     st.markdown(
         f'<div class="reg-banner-wrap"><div class="reg-banner-track"><span>{_msg}</span></div></div>',
         unsafe_allow_html=True,
@@ -2916,7 +2916,7 @@ or upload a photo or PDF of a question you're struggling with and get an AI expl
 
 <details style="margin-bottom:0.75rem; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:0.75rem 1rem;">
   <summary style="cursor:pointer; font-weight:600; color:#e2e8f0;">Is Maths Daily Helper completely free?</summary>
-  <p style="margin:0.5rem 0 0 0;">Yes. Maths Daily Helper is 100% free — no sign-up, no subscription, no credit card. Every feature including problem generation, hints, step-by-step solutions, and exam paper generation is available at no cost.</p>
+  <p style="margin:0.5rem 0 0 0;">Yes. Maths Daily Helper is 100% free — no subscription, no credit card. Simply create a free account to access all features including problem generation, hints, step-by-step solutions, and exam paper generation.</p>
 </details>
 
 <details style="margin-bottom:0.75rem; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:0.75rem 1rem;">
